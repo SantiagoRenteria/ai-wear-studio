@@ -52,4 +52,14 @@ public class Company : AggregateRoot
         ActivatedBy = adminId;
         ActivatedAt = DateTime.UtcNow;
     }
+
+    public void UpdateSettings(string? newName, string settingsJson)
+    {
+        if (newName is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+            Name = newName.Trim();
+        }
+        Settings = settingsJson;
+    }
 }

@@ -83,6 +83,7 @@ try
     app.MapAuthEndpoints();
     app.MapUsersEndpoints();
     app.MapCompaniesEndpoints();
+    app.MapWorkshopCompaniesEndpoints();
     app.MapInvitationsEndpoints();
 
     app.Run();
