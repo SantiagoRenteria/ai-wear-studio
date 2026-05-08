@@ -3,6 +3,7 @@ using AiWearStudio.CompanyAdmin.Application.Commands.SuspendCompany;
 using AiWearStudio.CompanyAdmin.Domain.Enums;
 using AiWearStudio.CompanyAdmin.Infrastructure.Persistence;
 using AiWearStudio.CompanyAdmin.Infrastructure.Persistence.Repositories;
+using AiWearStudio.CompanyAdmin.Infrastructure.Services;
 using AiWearStudio.SharedKernel.Common;
 using AiWearStudio.SharedKernel.Domain;
 using AiWearStudio.Users.Core.Domain.Entities;
@@ -46,7 +47,8 @@ public class CompanySuspensionTests : IAsyncLifetime
 
         _companyRepo = new CompanyRepository(_companyDb);
         _revocationService = new TenantAccessRevocationService(_usersDb);
-        _createHandler = new CreateCompanyCommandHandler(_companyRepo);
+        var featureFlagService = new FeatureFlagService(_companyDb);
+        _createHandler = new CreateCompanyCommandHandler(_companyRepo, featureFlagService);
         _suspendHandler = new SuspendCompanyCommandHandler(_companyRepo, _revocationService);
     }
 

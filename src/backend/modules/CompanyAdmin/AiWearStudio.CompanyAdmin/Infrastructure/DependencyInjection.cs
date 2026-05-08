@@ -1,6 +1,8 @@
 using AiWearStudio.CompanyAdmin.Domain.Repositories;
 using AiWearStudio.CompanyAdmin.Infrastructure.Persistence;
 using AiWearStudio.CompanyAdmin.Infrastructure.Persistence.Repositories;
+using AiWearStudio.CompanyAdmin.Infrastructure.Services;
+using AiWearStudio.SharedKernel.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +17,7 @@ public static class DependencyInjection
             opts.UseNpgsql(config.GetConnectionString("CompanyAdmin")));
 
         services.AddScoped<ICompanyRepository, CompanyRepository>();
+        services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 
         return services;
     }

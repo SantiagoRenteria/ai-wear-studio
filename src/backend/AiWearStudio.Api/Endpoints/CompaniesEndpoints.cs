@@ -3,6 +3,7 @@ using AiWearStudio.CompanyAdmin.Application.Commands.CreateCompany;
 using AiWearStudio.CompanyAdmin.Application.Commands.SuspendCompany;
 using AiWearStudio.CompanyAdmin.Domain.Enums;
 using AiWearStudio.CompanyAdmin.Domain.Repositories;
+using AiWearStudio.SharedKernel.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -102,6 +103,32 @@ public static class CompaniesEndpoints
         .ProducesProblem(401)
         .ProducesProblem(403)
         .ProducesProblem(404);
+
+        group.MapPatch("/{id:guid}/flags/{key}", async (
+            Guid id,
+            string key,
+            SetFlagRequest req,
+            IFeatureFlagService featureFlagService,
+            ICompanyRepository repo,
+            HttpContext ctx,
+            CancellationToken ct) =>
+        {
+            if (!TryGetAdminId(ctx, out var adminId))
+                return Results.Problem(title: "Identidad no válida", detail: "El token no contiene un identificador de usuario válido.", statusCode: 401);
+
+            var company = await repo.FindByIdAsync(id, ct);
+            if (company is null)
+                return Results.Problem(title: "Compañía no encontrada", detail: "La compañía solicitada no existe.", statusCode: 404);
+
+            await featureFlagService.SetFlagAsync(id, key, req.Enabled, adminId, ct);
+            return Results.Ok();
+        })
+        .WithName("SetCompanyFlag")
+        .Produces(200)
+        .ProducesProblem(401)
+        .ProducesProblem(403)
+        .ProducesProblem(404)
+        .ProducesProblem(422);
     }
 
     private static bool TryGetAdminId(HttpContext ctx, out Guid adminId)
@@ -114,3 +141,4 @@ public static class CompaniesEndpoints
 public record CreateCompanyRequest(string Name, string Slug, Plan Plan);
 public record AssignPlanRequest(Plan NewPlan, string? Reason);
 public record SuspendCompanyRequest(string? Reason);
+public record SetFlagRequest(bool Enabled);

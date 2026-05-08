@@ -49,6 +49,11 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             await WriteProblemAsync(context, 404, "Compañía no encontrada",
                 "La compañía solicitada no existe.");
         }
+        catch (DomainException ex) when (ex.Message.StartsWith("UNKNOWN_FEATURE_KEY"))
+        {
+            await WriteProblemAsync(context, 422, "Feature key inválida",
+                "La clave de feature flag especificada no existe.");
+        }
         catch (DomainException ex) when (ex.Message.StartsWith("DUPLICATE_SLUG"))
         {
             await WriteProblemAsync(context, 409, "Slug duplicado",

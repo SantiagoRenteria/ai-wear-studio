@@ -3,6 +3,7 @@ using AiWearStudio.CompanyAdmin.Application.Commands.CreateCompany;
 using AiWearStudio.CompanyAdmin.Domain.Enums;
 using AiWearStudio.CompanyAdmin.Infrastructure.Persistence;
 using AiWearStudio.CompanyAdmin.Infrastructure.Persistence.Repositories;
+using AiWearStudio.CompanyAdmin.Infrastructure.Services;
 using AiWearStudio.SharedKernel.Domain;
 using AiWearStudio.Users.Core.Application.Interfaces;
 using AiWearStudio.Users.Core.Domain.Entities;
@@ -49,7 +50,8 @@ public class CompanyAdminTests : IAsyncLifetime
         await _usersDb.Database.MigrateAsync();
 
         _companyRepo = new CompanyRepository(_companyDb);
-        _createHandler = new CreateCompanyCommandHandler(_companyRepo);
+        var featureFlagService = new FeatureFlagService(_companyDb);
+        _createHandler = new CreateCompanyCommandHandler(_companyRepo, featureFlagService);
         _assignPlanHandler = new AssignPlanCommandHandler(_companyRepo);
 
         var jwtOptions = Options.Create(new AiWearStudio.Users.Infrastructure.JwtSettings

@@ -57,6 +57,21 @@ Issues surfaced during code review but pre-existing or out-of-scope for the trig
 | D-28 | **Handler COMPANY_SUSPENDED muerto en GlobalExceptionMiddleware**: El middleware detecta PlanStatus=Suspended antes de llegar al handler — la excepción `DomainException("COMPANY_SUSPENDED:...")` nunca se lanza desde un handler. El `catch` en GlobalExceptionMiddleware es dead code. Evaluar si se elimina o se mantiene como safety net. | Low | 1.4b | Refactor de exception handling |
 | D-29 | **Sin test de arquitectura para aislamiento CompanyAdmin→Users**: No hay ArchUnit/.NET Architect test que prevenga regresiones de la regla "CompanyAdmin no puede referenciar Users.Core ni Users.Infrastructure". | Low | 1.4b | Hardening de arquitectura |
 
+## From Story 1.5 Scope Split
+
+| # | Finding | Severity | Source Story | Suggested Story |
+|---|---------|----------|--------------|-----------------|
+| D-30 | **Invitación de Usuarios Internos (Story 1.5b)**: tabla `user_invitations` (token UUID, tenant_id, role, invited_by, expires_at 48h, consumed_at), estado `pending_activation` en User, `POST /api/v1/invitations` (platform_admin → workshop_admin; workshop_admin → operator propio tenant), `POST /api/v1/auth/accept-invitation` (consume token, activa cuenta, retorna JWT), email via Notifications module, AC-RBAC-INVITE-SCOPE (workshop_admin no puede invitar fuera de su tenant → 403). Split de Story 1.5 por tamaño. | High | 1.5 scope split | Story 1.5b |
+| D-31 | **Límite Demo de IA (20 generaciones totales)**: Enforcement de cuota Demo en el tier de generación IA. Requiere DesignEngine BC + contador de uso en `company_feature_flags` o tabla dedicada. Sin infraestructura en Epic 1 para contarlo. Deferir a Epic 3. | High | 1.5 scope split | Story 3.3 o adyacente |
+
+## From Story 1.5a Review
+
+| # | Finding | Severity | Source Story | Suggested Story |
+|---|---------|----------|--------------|-----------------|
+| D-32 | **Race condition en `SetFlagAsync`**: Read-modify-write sin concurrencia optimista — dos requests simultáneas sobre la misma `(companyId, featureKey)` pueden colisionar en el insert. Agregar `[ConcurrencyCheck]` o manejo de `DbUpdateConcurrencyException`. | Low | 1.5a | Hardening de infraestructura |
+| D-33 | **`SeedForPlanAsync` no atómico con creación de compañía**: La compañía persiste en un `SaveChangesAsync` y los flags en otro. Si la app muere entre ambos, la compañía queda sin flags. El guard de idempotencia en SeedForPlanAsync permite re-seed manual, pero no hay recovery automático. | Low | 1.5a | Hardening de infraestructura |
+| D-34 | **Clock abstraction en entidades de dominio**: `DateTime.UtcNow` llamado directamente en `CompanyFeatureFlag.Create` y `SetEnabled`. Dificulta tests determinísticos de timestamps. Inyectar `TimeProvider` (disponible en .NET 8+). | Low | 1.5a | Hardening de tests |
+
 ## From Story 1.2 Scope Split
 
 | # | Finding | Severity | Source Story | Suggested Story |

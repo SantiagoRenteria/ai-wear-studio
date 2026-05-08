@@ -8,6 +8,7 @@ public class CompanyAdminDbContext(DbContextOptions<CompanyAdminDbContext> optio
 {
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<PlanAuditLog> PlanAuditLogs => Set<PlanAuditLog>();
+    public DbSet<CompanyFeatureFlag> CompanyFeatureFlags => Set<CompanyFeatureFlag>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,6 +53,25 @@ public class CompanyAdminDbContext(DbContextOptions<CompanyAdminDbContext> optio
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(p => p.CompanyId, "ix_plan_audit_log_company_id");
+        });
+
+        modelBuilder.Entity<CompanyFeatureFlag>(entity =>
+        {
+            entity.ToTable("company_feature_flags");
+            entity.HasKey(f => new { f.CompanyId, f.FeatureKey });
+            entity.Property(f => f.CompanyId).HasColumnName("company_id");
+            entity.Property(f => f.FeatureKey).HasColumnName("feature_key").HasMaxLength(100);
+            entity.Property(f => f.Enabled).HasColumnName("enabled");
+            entity.Property(f => f.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(f => f.UpdatedBy).HasColumnName("updated_by");
+
+            entity.HasOne<Company>()
+                .WithMany()
+                .HasForeignKey(f => f.CompanyId)
+                .HasConstraintName("fk_company_feature_flags_company")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(f => f.CompanyId, "ix_company_feature_flags_company_id");
         });
     }
 }
