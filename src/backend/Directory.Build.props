@@ -1,0 +1,6 @@
+<Project>
+  <!-- Unifica la versión de EF Core Relational para eliminar el conflicto entre Npgsql y EFCore -->
+  <ItemGroup>
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Relational" Version="9.0.4" />
+  </ItemGroup>
+</Project>

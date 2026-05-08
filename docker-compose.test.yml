@@ -1,0 +1,19 @@
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: aiwearstudio_test
+      POSTGRES_USER: aiwear_test
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiwear_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"

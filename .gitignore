@@ -1,3 +1,4 @@
+## General
 node_modules/
 build/
 dist/
@@ -6,3 +7,31 @@ coverage/
 *.log
 .env*
 !.env.example
+
+## .NET build artifacts
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.swp
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+## Test results
+TestResults/
+*.trx
+*.coveragexml
+
+## Dev scratch files
+src/backend/api_out.txt
+src/backend/api_err.txt
+src/backend/migration_init.sql
+src/backend/migration_final.sql
+src/backend/migration_v2.sql

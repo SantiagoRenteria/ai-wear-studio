@@ -1,0 +1,38 @@
+<Solution>
+  <Folder Name="/infrastructure/">
+    <Project Path="infrastructure/AiWearStudio.SharedKernel/AiWearStudio.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/modules/" />
+  <Folder Name="/modules/Catalog/">
+    <Project Path="modules/Catalog/AiWearStudio.Catalog/AiWearStudio.Catalog.csproj" />
+  </Folder>
+  <Folder Name="/modules/CompanyAdmin/">
+    <Project Path="modules/CompanyAdmin/AiWearStudio.CompanyAdmin/AiWearStudio.CompanyAdmin.csproj" />
+  </Folder>
+  <Folder Name="/modules/DesignEngine/">
+    <Project Path="modules/DesignEngine/AiWearStudio.DesignEngine.Core/AiWearStudio.DesignEngine.Core.csproj" />
+    <Project Path="modules/DesignEngine/AiWearStudio.DesignEngine.Infrastructure/AiWearStudio.DesignEngine.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/modules/Orders/">
+    <Project Path="modules/Orders/AiWearStudio.Orders.Core/AiWearStudio.Orders.Core.csproj" />
+    <Project Path="modules/Orders/AiWearStudio.Orders.Infrastructure/AiWearStudio.Orders.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/modules/ProductionQueue/">
+    <Project Path="modules/ProductionQueue/AiWearStudio.ProductionQueue/AiWearStudio.ProductionQueue.csproj" />
+  </Folder>
+  <Folder Name="/modules/Users/">
+    <Project Path="modules/Users/AiWearStudio.Users.Core/AiWearStudio.Users.Core.csproj" />
+    <Project Path="modules/Users/AiWearStudio.Users.Infrastructure/AiWearStudio.Users.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AiWearStudio.Architecture.Tests/AiWearStudio.Architecture.Tests.csproj" />
+    <Project Path="tests/AiWearStudio.Catalog.Tests/AiWearStudio.Catalog.Tests.csproj" />
+    <Project Path="tests/AiWearStudio.CompanyAdmin.Tests/AiWearStudio.CompanyAdmin.Tests.csproj" />
+    <Project Path="tests/AiWearStudio.DesignEngine.Tests/AiWearStudio.DesignEngine.Tests.csproj" />
+    <Project Path="tests/AiWearStudio.Orders.Tests/AiWearStudio.Orders.Tests.csproj" />
+    <Project Path="tests/AiWearStudio.ProductionQueue.Tests/AiWearStudio.ProductionQueue.Tests.csproj" />
+    <Project Path="tests/AiWearStudio.Users.Tests/AiWearStudio.Users.Tests.csproj" />
+  </Folder>
+  <Project Path="AiWearStudio.Api/AiWearStudio.Api.csproj" />
+  <Project Path="AiWearStudio.Notifications/AiWearStudio.Notifications.csproj" />
+</Solution>
