@@ -2,7 +2,10 @@ using AiWearStudio.Api.Behaviors;
 using AiWearStudio.Api.Endpoints;
 using AiWearStudio.Api.Filters;
 using AiWearStudio.Api.Middleware;
-using AiWearStudio.Users.Core;
+using AiWearStudio.Api.Startup;
+using AiWearStudio.CompanyAdmin;
+using AiWearStudio.CompanyAdmin.Infrastructure;
+using AiWearStudio.Users.Core; // kept for other implicit usages
 using AiWearStudio.Users.Infrastructure;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -26,13 +29,17 @@ try
     // MediatR — pipeline order: Idempotency → Logging → Validation → Handler
     builder.Services.AddMediatR(cfg =>
     {
-        cfg.RegisterServicesFromAssemblies(typeof(AssemblyMarker).Assembly);
+        cfg.RegisterServicesFromAssemblies(
+            typeof(AiWearStudio.Users.Core.AssemblyMarker).Assembly,
+            typeof(AiWearStudio.CompanyAdmin.AssemblyMarker).Assembly);
         cfg.AddOpenBehavior(typeof(IdempotencyBehavior<,>));
         cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
         cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
     });
 
-    builder.Services.AddValidatorsFromAssemblyContaining<AssemblyMarker>(ServiceLifetime.Transient);
+    builder.Services.AddValidatorsFromAssemblyContaining<AiWearStudio.Users.Core.AssemblyMarker>(ServiceLifetime.Transient);
+    builder.Services.AddValidatorsFromAssembly(
+        typeof(AiWearStudio.CompanyAdmin.AssemblyMarker).Assembly, ServiceLifetime.Transient);
 
     // JWT Authentication
     var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret not configured");
@@ -56,6 +63,7 @@ try
 
     // Modules
     builder.Services.AddUsersModule(builder.Configuration);
+    builder.Services.AddCompanyAdminModule(builder.Configuration);
 
     // IStartupFilter: captive dependency detection
     builder.Services.AddTransient<IStartupFilter, TenantContextCaptureValidationFilter>(
@@ -65,11 +73,16 @@ try
 
     var app = builder.Build();
 
+    // Seed platform admin if env vars are present
+    await DatabaseSeeder.SeedPlatformAdminAsync(app.Services);
+
     app.UseMiddleware<GlobalExceptionMiddleware>();
     app.UseAuthentication();
+    app.UseMiddleware<CompanySuspensionMiddleware>();
     app.UseAuthorization();
     app.MapAuthEndpoints();
     app.MapUsersEndpoints();
+    app.MapCompaniesEndpoints();
 
     app.Run();
 }

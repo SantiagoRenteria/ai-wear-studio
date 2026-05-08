@@ -39,6 +39,26 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             await WriteProblemAsync(context, 404, "Usuario no encontrado",
                 "El usuario solicitado no existe.");
         }
+        catch (DomainException ex) when (ex.Message.StartsWith("COMPANY_SUSPENDED"))
+        {
+            await WriteProblemAsync(context, 403, "Compañía suspendida",
+                "El acceso a esta compañía ha sido suspendido. Contacta al soporte.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("COMPANY_NOT_FOUND"))
+        {
+            await WriteProblemAsync(context, 404, "Compañía no encontrada",
+                "La compañía solicitada no existe.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("UNKNOWN_FEATURE_KEY"))
+        {
+            await WriteProblemAsync(context, 422, "Feature key inválida",
+                "La clave de feature flag especificada no existe.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("DUPLICATE_SLUG"))
+        {
+            await WriteProblemAsync(context, 409, "Slug duplicado",
+                "El slug especificado ya está en uso por otra compañía.");
+        }
         catch (DomainException ex) when (ex.Message.StartsWith("DUPLICATE_EMAIL"))
         {
             await WriteProblemAsync(context, 409, "Email ya registrado",
@@ -52,6 +72,12 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
         catch (DomainException ex)
         {
             await WriteProblemAsync(context, 422, "Error de negocio", ex.Message);
+        }
+        catch (DbUpdateException ex) when (IsSlugConstraintViolation(ex))
+        {
+            logger.LogWarning(ex, "Slug unique constraint violation for {Path}", context.Request.Path);
+            await WriteProblemAsync(context, 409, "Slug duplicado",
+                "El slug especificado ya está en uso por otra compañía.");
         }
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
@@ -67,6 +93,11 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             await WriteProblemAsync(context, 500, "Error interno", "Ha ocurrido un error inesperado.");
         }
     }
+
+    private static bool IsSlugConstraintViolation(DbUpdateException ex) =>
+        ex.InnerException is PostgresException pg
+        && pg.SqlState == PostgresUniqueViolation
+        && pg.ConstraintName == "uix_company_slug";
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex) =>
         ex.InnerException is PostgresException pg && pg.SqlState == PostgresUniqueViolation;
