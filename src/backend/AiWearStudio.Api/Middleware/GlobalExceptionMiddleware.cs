@@ -49,6 +49,11 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             await WriteProblemAsync(context, 409, "Conflicto de rol",
                 "Este email ya está registrado como usuario interno y no puede usarse para registro de cliente.");
         }
+        catch (DomainException ex) when (ex.Message.StartsWith("GARMENT_VIEW_NOT_FOUND"))
+        {
+            await WriteProblemAsync(context, 404, "Vista no encontrada",
+                "La combinación de prenda y vista solicitada no existe.");
+        }
         catch (DomainException ex)
         {
             await WriteProblemAsync(context, 422, "Error de negocio", ex.Message);

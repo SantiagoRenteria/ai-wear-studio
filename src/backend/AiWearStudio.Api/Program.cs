@@ -2,6 +2,7 @@ using AiWearStudio.Api.Behaviors;
 using AiWearStudio.Api.Endpoints;
 using AiWearStudio.Api.Filters;
 using AiWearStudio.Api.Middleware;
+using AiWearStudio.Catalog.Infrastructure;
 using AiWearStudio.Users.Core;
 using AiWearStudio.Users.Infrastructure;
 using FluentValidation;
@@ -26,7 +27,9 @@ try
     // MediatR — pipeline order: Idempotency → Logging → Validation → Handler
     builder.Services.AddMediatR(cfg =>
     {
-        cfg.RegisterServicesFromAssemblies(typeof(AssemblyMarker).Assembly);
+        cfg.RegisterServicesFromAssemblies(
+            typeof(AssemblyMarker).Assembly,
+            typeof(AiWearStudio.Catalog.AssemblyMarker).Assembly);
         cfg.AddOpenBehavior(typeof(IdempotencyBehavior<,>));
         cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
         cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
@@ -56,6 +59,7 @@ try
 
     // Modules
     builder.Services.AddUsersModule(builder.Configuration);
+    builder.Services.AddCatalogModule(builder.Configuration);
 
     // IStartupFilter: captive dependency detection
     builder.Services.AddTransient<IStartupFilter, TenantContextCaptureValidationFilter>(
@@ -70,6 +74,7 @@ try
     app.UseAuthorization();
     app.MapAuthEndpoints();
     app.MapUsersEndpoints();
+    app.MapCatalogEndpoints();
 
     app.Run();
 }
