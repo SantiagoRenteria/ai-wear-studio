@@ -40,6 +40,12 @@ Issues surfaced during code review but pre-existing or out-of-scope for the trig
 | D-21 | **Sin reactivación de usuarios**: La spec define desactivación unidireccional por decisión de diseño. Si se requiere reactivación (`User.Reactivate()`, quitar `deleted_at`), debe negociarse como historia separada con criterios de autorización. | Low | 1.3 | Story de reactivación |
 | D-22 | **`[Authorize(Roles)]` solo aplica a `DELETE /users/{id}`**: Otros endpoints futuros bajo `/api/v1/users` (PATCH, GET list) necesitarán sus propias declaraciones de rol. Considerar policy-based authorization centralizada en lugar de `AuthorizeAttribute` inline para escalar sin repetición. | Low | 1.3 | Cuando se agreguen endpoints de Users |
 
+## From Story 1.4 Scope Split
+
+| # | Finding | Severity | Source Story | Suggested Story |
+|---|---------|----------|--------------|-----------------|
+| D-23 | **Suspensión de compañías (Story 1.4b)**: `SuspendCompany` command + `ITenantAccessRevocationService` en SharedKernel (implementado en Users.Infrastructure, revoca todos los refresh tokens del tenant via join users+refresh_tokens por TenantId) + `CompanySuspensionMiddleware` (IServiceScopeFactory, lee claim `tenant_id`, busca Company, si `PlanStatus=Suspended` → 403 RFC 7807). Split de Story 1.4 por tamaño (~900 tokens). | High | 1.4 scope split | Story 1.4b |
+
 ## From Story 1.2 Scope Split
 
 | # | Finding | Severity | Source Story | Suggested Story |

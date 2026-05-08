@@ -41,6 +41,19 @@ public class User : AggregateRoot
         };
     }
 
+    public static User CreatePlatformAdmin(string email, string passwordHash)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+        ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
+        return new User
+        {
+            Email = email.ToLowerInvariant().Trim(),
+            PasswordHash = passwordHash,
+            Role = UserRole.PlatformAdmin,
+            TenantId = null
+        };
+    }
+
     public void Deactivate()
     {
         IsActive = false;
