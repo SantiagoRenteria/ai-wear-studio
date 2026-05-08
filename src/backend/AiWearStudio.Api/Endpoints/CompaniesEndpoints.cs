@@ -1,5 +1,6 @@
 using AiWearStudio.CompanyAdmin.Application.Commands.AssignPlan;
 using AiWearStudio.CompanyAdmin.Application.Commands.CreateCompany;
+using AiWearStudio.CompanyAdmin.Application.Commands.SuspendCompany;
 using AiWearStudio.CompanyAdmin.Domain.Enums;
 using AiWearStudio.CompanyAdmin.Domain.Repositories;
 using MediatR;
@@ -82,6 +83,25 @@ public static class CompaniesEndpoints
         .ProducesProblem(401)
         .ProducesProblem(403)
         .ProducesProblem(404);
+
+        group.MapPatch("/{id:guid}/suspend", async (
+            Guid id,
+            SuspendCompanyRequest req,
+            ISender sender,
+            HttpContext ctx,
+            CancellationToken ct) =>
+        {
+            if (!TryGetAdminId(ctx, out var adminId))
+                return Results.Problem(title: "Identidad no válida", detail: "El token no contiene un identificador de usuario válido.", statusCode: 401);
+            await sender.Send(new SuspendCompanyCommand(id, adminId, req.Reason), ct);
+            return Results.Ok();
+        })
+        .WithName("SuspendCompany")
+        .Produces(200)
+        .ProducesProblem(400)
+        .ProducesProblem(401)
+        .ProducesProblem(403)
+        .ProducesProblem(404);
     }
 
     private static bool TryGetAdminId(HttpContext ctx, out Guid adminId)
@@ -93,3 +113,4 @@ public static class CompaniesEndpoints
 
 public record CreateCompanyRequest(string Name, string Slug, Plan Plan);
 public record AssignPlanRequest(Plan NewPlan, string? Reason);
+public record SuspendCompanyRequest(string? Reason);

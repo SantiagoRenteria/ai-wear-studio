@@ -39,6 +39,11 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             await WriteProblemAsync(context, 404, "Usuario no encontrado",
                 "El usuario solicitado no existe.");
         }
+        catch (DomainException ex) when (ex.Message.StartsWith("COMPANY_SUSPENDED"))
+        {
+            await WriteProblemAsync(context, 403, "Compañía suspendida",
+                "El acceso a esta compañía ha sido suspendido. Contacta al soporte.");
+        }
         catch (DomainException ex) when (ex.Message.StartsWith("COMPANY_NOT_FOUND"))
         {
             await WriteProblemAsync(context, 404, "Compañía no encontrada",

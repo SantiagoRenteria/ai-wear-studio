@@ -78,6 +78,7 @@ try
 
     app.UseMiddleware<GlobalExceptionMiddleware>();
     app.UseAuthentication();
+    app.UseMiddleware<CompanySuspensionMiddleware>();
     app.UseAuthorization();
     app.MapAuthEndpoints();
     app.MapUsersEndpoints();

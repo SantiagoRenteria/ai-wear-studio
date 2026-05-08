@@ -46,6 +46,17 @@ Issues surfaced during code review but pre-existing or out-of-scope for the trig
 |---|---------|----------|--------------|-----------------|
 | D-23 | **Suspensión de compañías (Story 1.4b)**: `SuspendCompany` command + `ITenantAccessRevocationService` en SharedKernel (implementado en Users.Infrastructure, revoca todos los refresh tokens del tenant via join users+refresh_tokens por TenantId) + `CompanySuspensionMiddleware` (IServiceScopeFactory, lee claim `tenant_id`, busca Company, si `PlanStatus=Suspended` → 403 RFC 7807). Split de Story 1.4 por tamaño (~900 tokens). | High | 1.4 scope split | Story 1.4b |
 
+## From Story 1.4b Review
+
+| # | Finding | Severity | Source Story | Suggested Story |
+|---|---------|----------|--------------|-----------------|
+| D-24 | **Sin caché en CompanySuspensionMiddleware**: Cada request autenticada con `tenant_id` genera un SELECT a CompanyAdminDbContext. Con alto tráfico, agregar caché distribuida (Redis) con TTL ≤ TTL del access token (60 min) y evict on suspend. | Medium | 1.4b | Hardening de multi-tenancy |
+| D-25 | **Revocación de tokens no atómica con suspensión**: CompanyAdminDbContext y UsersDbContext son transacciones separadas. Si `TenantAccessRevocationService` falla, el tenant está suspendido pero los tokens permanecen válidos hasta su TTL (≤ 60 min). Aceptado por diseño — el middleware bloquea igual. Documentar SLA. | Low | 1.4b | Hardening de infraestructura |
+| D-26 | **`Company.Suspend()` sobreescribe `ActivatedBy/ActivatedAt`**: Semánticamente incorrecto — estos campos representan la activación del plan, no la suspensión. Agregar `SuspendedBy` (Guid?) y `SuspendedAt` (DateTime?) si se requiere auditoría granular de suspensiones. | Low | 1.4b | Epic de auditoría |
+| D-27 | **Sin test HTTP para CompanySuspensionMiddleware**: AC-SUSPEND-E2E prueba handler + service directo, no el pipeline HTTP. Agregar test de integración con `WebApplicationFactory` que envíe request con JWT de tenant suspendido y afirme respuesta 403 RFC 7807. | Medium | 1.4b | Hardening de tests |
+| D-28 | **Handler COMPANY_SUSPENDED muerto en GlobalExceptionMiddleware**: El middleware detecta PlanStatus=Suspended antes de llegar al handler — la excepción `DomainException("COMPANY_SUSPENDED:...")` nunca se lanza desde un handler. El `catch` en GlobalExceptionMiddleware es dead code. Evaluar si se elimina o se mantiene como safety net. | Low | 1.4b | Refactor de exception handling |
+| D-29 | **Sin test de arquitectura para aislamiento CompanyAdmin→Users**: No hay ArchUnit/.NET Architect test que prevenga regresiones de la regla "CompanyAdmin no puede referenciar Users.Core ni Users.Infrastructure". | Low | 1.4b | Hardening de arquitectura |
+
 ## From Story 1.2 Scope Split
 
 | # | Finding | Severity | Source Story | Suggested Story |

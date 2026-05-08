@@ -43,4 +43,13 @@ public class Company : AggregateRoot
         ActivatedBy = adminId;
         ActivatedAt = DateTime.UtcNow;
     }
+
+    public void Suspend(Guid adminId, string? reason)
+    {
+        if (PlanStatus == PlanStatus.Suspended) return;
+
+        PlanStatus = PlanStatus.Suspended;
+        ActivatedBy = adminId;
+        ActivatedAt = DateTime.UtcNow;
+    }
 }
