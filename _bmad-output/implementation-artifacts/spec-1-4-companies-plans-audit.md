@@ -2,7 +2,7 @@
 title: 'Story 1.4 — Gestión de Compañías, Planes y Audit Trail'
 type: 'feature'
 created: '2026-05-08'
-status: 'in-review'
+status: 'done'
 baseline_commit: '86ba50f03394bf15d5263997d64c113a56ceb111'
 context:
   - '_bmad-output/implementation-artifacts/epic-1-context.md'
