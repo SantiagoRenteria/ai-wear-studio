@@ -22,10 +22,12 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IUserInvitationRepository, UserInvitationRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddScoped<IPasswordHasherService, PasswordHasherService>();
         services.AddScoped<ITenantAccessRevocationService, TenantAccessRevocationService>();
+        services.AddScoped<IEmailSender, LoggingEmailSender>();
 
         return services;
     }
