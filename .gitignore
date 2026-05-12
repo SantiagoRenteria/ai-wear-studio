@@ -35,3 +35,6 @@ src/backend/api_err.txt
 src/backend/migration_init.sql
 src/backend/migration_final.sql
 src/backend/migration_v2.sql
+
+# Claude local settings
+.claude/settings.local.json
