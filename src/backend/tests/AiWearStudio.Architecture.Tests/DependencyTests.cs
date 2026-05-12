@@ -1,3 +1,4 @@
+using AiWearStudio.SharedKernel.Common;
 using NetArchTest.Rules;
 using Xunit;
 
@@ -57,5 +58,41 @@ public class DependencyTests
 
         Assert.True(usersResult.IsSuccessful,
             $"BC.Core cross-reference detected: {string.Join(", ", usersResult.FailingTypeNames ?? [])}");
+    }
+
+    [Fact(DisplayName = "ARCH-05: IRateLimitPolicy interface reside en SharedKernel")]
+    public void IRateLimitPolicy_Interface_ResideInSharedKernel()
+    {
+        var sharedKernelAssembly = typeof(AiWearStudio.SharedKernel.Domain.Entity).Assembly;
+        var rateLimitType = sharedKernelAssembly.GetType("AiWearStudio.SharedKernel.Common.IRateLimitPolicy");
+
+        Assert.NotNull(rateLimitType);
+        Assert.True(rateLimitType.IsInterface, "IRateLimitPolicy debe ser una interface");
+    }
+
+    [Fact(DisplayName = "ARCH-15: Ninguna implementación de IRateLimitPolicy reside en SharedKernel")]
+    public void IRateLimitPolicy_Implementations_NotInSharedKernel()
+    {
+        var sharedKernelAssembly = typeof(AiWearStudio.SharedKernel.Domain.Entity).Assembly;
+        var rateLimitInterface = typeof(IRateLimitPolicy);
+
+        var implementations = sharedKernelAssembly.GetTypes()
+            .Where(t => t.IsClass && !t.IsAbstract && rateLimitInterface.IsAssignableFrom(t))
+            .Select(t => t.FullName)
+            .ToList();
+
+        Assert.Empty(implementations);
+    }
+
+    [Fact(DisplayName = "ARCH-15b: DesignEngine.Core no depende de DesignEngine.Infrastructure")]
+    public void DesignEngineCore_ShouldNotDependOnInfrastructure()
+    {
+        var result = Types.InAssembly(typeof(AiWearStudio.DesignEngine.Core.AssemblyMarker).Assembly)
+            .ShouldNot()
+            .HaveDependencyOn("AiWearStudio.DesignEngine.Infrastructure")
+            .GetResult();
+
+        Assert.True(result.IsSuccessful,
+            $"DesignEngine.Core depends on Infrastructure: {string.Join(", ", result.FailingTypeNames ?? [])}");
     }
 }

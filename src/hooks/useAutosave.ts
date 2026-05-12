@@ -54,6 +54,23 @@ export function useAutosave({ paused = false }: UseAutosaveOptions = {}) {
 
   // Suscripcion al store.
   useEffect(() => {
+    const VIEW_SERIAL_MAP: Record<string, string> = {
+      left_sleeve: 'left',
+      right_sleeve: 'right',
+    };
+    const toViewId = (v: string) => VIEW_SERIAL_MAP[v] ?? v;
+
+    const persistCanonical = (id: string, layers: ReturnType<typeof useStore.getState>['layers']) => {
+      for (const [viewKey, viewLayers] of Object.entries(layers)) {
+        try {
+          localStorage.setItem(
+            `design:${id}:${toViewId(viewKey)}`,
+            JSON.stringify(viewLayers),
+          );
+        } catch { /* storage full — swallow */ }
+      }
+    };
+
     const persist = () => {
       if (pausedRef.current) return;
       const id = sessionIdRef.current;
@@ -76,6 +93,7 @@ export function useAutosave({ paused = false }: UseAutosaveOptions = {}) {
           currentView: state.currentView,
           layers: state.layers,
         });
+        persistCanonical(id, state.layers);
         setLastSavedAt(Date.now());
         setStatus('saved');
       } catch (err) {
@@ -115,13 +133,20 @@ export function useAutosave({ paused = false }: UseAutosaveOptions = {}) {
     });
 
     // Tambien intentamos guardar al cerrar la pestana, sin debounce.
-    const flushOnUnload = () => {
-      if (pausedRef.current) return;
+    const flushOnUnload = (e: BeforeUnloadEvent) => {
       const id = sessionIdRef.current;
-      if (!id) return;
       const state = useStore.getState();
+      const hasWork = !isSessionEmpty(state.layers);
+
+      if (hasWork && !pausedRef.current) {
+        // Diálogo de confirmación estándar del navegador (FR22 / UX-04)
+        e.preventDefault();
+      }
+
+      if (pausedRef.current) return;
+      if (!id) return;
       const existing = getSession(id);
-      if (!existing && isSessionEmpty(state.layers)) return;
+      if (!existing && !hasWork) return;
       try {
         saveSession({
           id,
@@ -131,6 +156,7 @@ export function useAutosave({ paused = false }: UseAutosaveOptions = {}) {
           currentView: state.currentView,
           layers: state.layers,
         });
+        persistCanonical(id, state.layers);
       } catch {
         /* swallow */
       }

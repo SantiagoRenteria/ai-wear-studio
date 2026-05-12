@@ -5,6 +5,8 @@ using AiWearStudio.Api.Middleware;
 using AiWearStudio.Api.Startup;
 using AiWearStudio.Catalog.Infrastructure;
 using AiWearStudio.CompanyAdmin;
+using AiWearStudio.DesignEngine.Core;
+using AiWearStudio.DesignEngine.Infrastructure;
 using AiWearStudio.CompanyAdmin.Infrastructure;
 using AiWearStudio.Users.Core;
 using AiWearStudio.Users.Infrastructure;
@@ -33,7 +35,8 @@ try
         cfg.RegisterServicesFromAssemblies(
             typeof(AiWearStudio.Users.Core.AssemblyMarker).Assembly,
             typeof(AiWearStudio.CompanyAdmin.AssemblyMarker).Assembly,
-            typeof(AiWearStudio.Catalog.AssemblyMarker).Assembly);
+            typeof(AiWearStudio.Catalog.AssemblyMarker).Assembly,
+            typeof(AiWearStudio.DesignEngine.Core.AssemblyMarker).Assembly);
         cfg.AddOpenBehavior(typeof(IdempotencyBehavior<,>));
         cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
         cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
@@ -67,6 +70,7 @@ try
     builder.Services.AddUsersModule(builder.Configuration);
     builder.Services.AddCompanyAdminModule(builder.Configuration);
     builder.Services.AddCatalogModule(builder.Configuration);
+    builder.Services.AddDesignEngineModule(builder.Configuration);
 
     // IStartupFilter: captive dependency detection
     builder.Services.AddTransient<IStartupFilter, TenantContextCaptureValidationFilter>(
@@ -90,6 +94,7 @@ try
     app.MapInvitationsEndpoints();
     app.MapCatalogEndpoints();
     app.MapAdminCatalogEndpoints();
+    app.MapDesignEngineEndpoints();
 
     app.Run();
 }

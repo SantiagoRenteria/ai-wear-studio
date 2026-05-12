@@ -59,11 +59,11 @@ const URLImage = ({ layer, isSelected, onSelect, onUpdate, stageWidth, stageHeig
         draggable onClick={onSelect} onTap={onSelect}
         dragBoundFunc={(pos) => {
           const node = shapeRef.current;
-          const w = node ? node.width() * layer.scaleX : 100;
-          const h = node ? node.height() * layer.scaleY : 100;
+          const w = node ? node.width() * Math.abs(layer.scaleX) : 100;
+          const h = node ? node.height() * Math.abs(layer.scaleY) : 100;
           return {
-            x: Math.max(-w * 0.5, Math.min(pos.x, stageWidth - w * 0.5)),
-            y: Math.max(-h * 0.5, Math.min(pos.y, stageHeight - h * 0.5)),
+            x: Math.max(0, Math.min(pos.x, Math.max(0, stageWidth - w))),
+            y: Math.max(0, Math.min(pos.y, Math.max(0, stageHeight - h))),
           };
         }}
         onDragEnd={(e) => onUpdate({ x: e.target.x(), y: e.target.y() })}
@@ -178,8 +178,8 @@ const TextLayer = ({
         shadowOffsetY={layer.textEffect === 'shadow' ? 4 : 0}
         draggable
         dragBoundFunc={(pos) => ({
-          x: Math.max(-50, Math.min(pos.x, stageWidth - 20)),
-          y: Math.max(-20, Math.min(pos.y, stageHeight - 20)),
+          x: Math.max(0, Math.min(pos.x, Math.max(0, stageWidth - 20))),
+          y: Math.max(0, Math.min(pos.y, Math.max(0, stageHeight - 20))),
         })}
         onClick={(e) => { e.cancelBubble = true; onSelect(); }}
         onTap={(e) => { e.cancelBubble = true; onSelect(); }}
