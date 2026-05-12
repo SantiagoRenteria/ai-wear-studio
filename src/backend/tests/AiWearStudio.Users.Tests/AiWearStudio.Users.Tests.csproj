@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\modules\Users\AiWearStudio.Users.Core\AiWearStudio.Users.Core.csproj" />
     <ProjectReference Include="..\..\modules\Users\AiWearStudio.Users.Infrastructure\AiWearStudio.Users.Infrastructure.csproj" />
     <ProjectReference Include="..\..\infrastructure\AiWearStudio.SharedKernel\AiWearStudio.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\modules\CompanyAdmin\AiWearStudio.CompanyAdmin\AiWearStudio.CompanyAdmin.csproj" />
   </ItemGroup>
 
 </Project>

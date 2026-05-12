@@ -39,6 +39,51 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             await WriteProblemAsync(context, 404, "Usuario no encontrado",
                 "El usuario solicitado no existe.");
         }
+        catch (DomainException ex) when (ex.Message.StartsWith("COMPANY_SUSPENDED"))
+        {
+            await WriteProblemAsync(context, 403, "Compañía suspendida",
+                "El acceso a esta compañía ha sido suspendido. Contacta al soporte.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("COMPANY_NOT_FOUND"))
+        {
+            await WriteProblemAsync(context, 404, "Compañía no encontrada",
+                "La compañía solicitada no existe.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("UNKNOWN_FEATURE_KEY"))
+        {
+            await WriteProblemAsync(context, 422, "Feature key inválida",
+                "La clave de feature flag especificada no existe.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("DUPLICATE_SLUG"))
+        {
+            await WriteProblemAsync(context, 409, "Slug duplicado",
+                "El slug especificado ya está en uso por otra compañía.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("INVITATION_NOT_FOUND"))
+        {
+            await WriteProblemAsync(context, 404, "Invitación no encontrada",
+                "El token de invitación no existe.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("INVITATION_EXPIRED"))
+        {
+            await WriteProblemAsync(context, 422, "Invitación expirada",
+                "La invitación ha expirado. Solicita una nueva invitación.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("INVITATION_ALREADY_CONSUMED"))
+        {
+            await WriteProblemAsync(context, 409, "Invitación ya utilizada",
+                "Esta invitación ya fue aceptada anteriormente.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("DUPLICATE_INVITATION"))
+        {
+            await WriteProblemAsync(context, 409, "Invitación duplicada",
+                "Ya existe una invitación pendiente para este email en el tenant.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("INVITE_SCOPE_VIOLATION"))
+        {
+            await WriteProblemAsync(context, 403, "Acceso no permitido",
+                "Solo puedes invitar a usuarios de tu propio tenant.");
+        }
         catch (DomainException ex) when (ex.Message.StartsWith("DUPLICATE_EMAIL"))
         {
             await WriteProblemAsync(context, 409, "Email ya registrado",
@@ -52,6 +97,12 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
         catch (DomainException ex)
         {
             await WriteProblemAsync(context, 422, "Error de negocio", ex.Message);
+        }
+        catch (DbUpdateException ex) when (IsSlugConstraintViolation(ex))
+        {
+            logger.LogWarning(ex, "Slug unique constraint violation for {Path}", context.Request.Path);
+            await WriteProblemAsync(context, 409, "Slug duplicado",
+                "El slug especificado ya está en uso por otra compañía.");
         }
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
@@ -67,6 +118,11 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             await WriteProblemAsync(context, 500, "Error interno", "Ha ocurrido un error inesperado.");
         }
     }
+
+    private static bool IsSlugConstraintViolation(DbUpdateException ex) =>
+        ex.InnerException is PostgresException pg
+        && pg.SqlState == PostgresUniqueViolation
+        && pg.ConstraintName == "uix_company_slug";
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex) =>
         ex.InnerException is PostgresException pg && pg.SqlState == PostgresUniqueViolation;

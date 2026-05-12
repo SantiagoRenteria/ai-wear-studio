@@ -1,3 +1,4 @@
+using AiWearStudio.Users.Core.Application.Commands.AcceptInvitation;
 using AiWearStudio.Users.Core.Application.Commands.Login;
 using AiWearStudio.Users.Core.Application.Commands.Logout;
 using AiWearStudio.Users.Core.Application.Commands.RefreshToken;
@@ -61,6 +62,21 @@ public static class AuthEndpoints
         })
         .WithName("Logout")
         .Produces(204);
+
+        group.MapPost("/accept-invitation", async (
+            [FromBody] AcceptInvitationRequest request,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new AcceptInvitationCommand(request.Token, request.Password), ct);
+            return Results.Ok(result);
+        })
+        .WithName("AcceptInvitation")
+        .Produces(200)
+        .ProducesProblem(400)
+        .ProducesProblem(404)
+        .ProducesProblem(409)
+        .ProducesProblem(422);
     }
 }
 
@@ -68,3 +84,4 @@ public record RegisterCustomerRequest(string Email, string Password);
 public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string Token);
 public record LogoutRequest(string Token);
+public record AcceptInvitationRequest(Guid Token, string Password);

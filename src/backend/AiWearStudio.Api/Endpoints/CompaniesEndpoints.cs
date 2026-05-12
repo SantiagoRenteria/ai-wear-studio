@@ -1,0 +1,212 @@
+using AiWearStudio.CompanyAdmin.Application.Commands.AssignPlan;
+using AiWearStudio.CompanyAdmin.Application.Commands.CreateCompany;
+using AiWearStudio.CompanyAdmin.Application.Commands.SuspendCompany;
+using AiWearStudio.CompanyAdmin.Application.Commands.UpdateCompanySettings;
+using AiWearStudio.CompanyAdmin.Domain.Enums;
+using AiWearStudio.CompanyAdmin.Domain.Repositories;
+using AiWearStudio.SharedKernel.Common;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using System.Text.Json;
+
+namespace AiWearStudio.Api.Endpoints;
+
+public static class CompaniesEndpoints
+{
+    public static void MapCompaniesEndpoints(this IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/v1/companies")
+            .RequireAuthorization(new AuthorizeAttribute { Roles = "platform_admin" });
+
+        group.MapPost("/", async (
+            CreateCompanyRequest req,
+            ISender sender,
+            HttpContext ctx,
+            CancellationToken ct) =>
+        {
+            if (!TryGetAdminId(ctx, out var adminId))
+                return Results.Problem(title: "Identidad no válida", detail: "El token no contiene un identificador de usuario válido.", statusCode: 401);
+            var id = await sender.Send(new CreateCompanyCommand(req.Name, req.Slug, req.Plan, adminId), ct);
+            return Results.Created($"/api/v1/companies/{id}", new { id });
+        })
+        .WithName("CreateCompany")
+        .Produces(201)
+        .ProducesProblem(400)
+        .ProducesProblem(401)
+        .ProducesProblem(403)
+        .ProducesProblem(409);
+
+        group.MapGet("/", async (ICompanyRepository repo, CancellationToken ct) =>
+        {
+            var companies = await repo.ListAsync(ct);
+            return Results.Ok(companies.Select(c => new
+            {
+                c.Id, c.Name, c.Slug, c.Plan, c.PlanStatus, c.CreatedAt, c.ActivatedAt
+            }));
+        })
+        .WithName("ListCompanies")
+        .Produces(200)
+        .ProducesProblem(401)
+        .ProducesProblem(403);
+
+        group.MapGet("/{id:guid}", async (Guid id, ICompanyRepository repo, CancellationToken ct) =>
+        {
+            var company = await repo.FindByIdAsync(id, ct);
+            if (company is null)
+                return Results.Problem(title: "Compañía no encontrada", detail: "La compañía solicitada no existe.", statusCode: 404);
+
+            return Results.Ok(new
+            {
+                company.Id, company.Name, company.Slug, company.Plan,
+                company.PlanStatus, company.CreatedAt, company.ActivatedAt, company.ActivatedBy
+            });
+        })
+        .WithName("GetCompany")
+        .Produces(200)
+        .ProducesProblem(401)
+        .ProducesProblem(403)
+        .ProducesProblem(404);
+
+        group.MapPatch("/{id:guid}/plan", async (
+            Guid id,
+            AssignPlanRequest req,
+            ISender sender,
+            HttpContext ctx,
+            CancellationToken ct) =>
+        {
+            if (!TryGetAdminId(ctx, out var adminId))
+                return Results.Problem(title: "Identidad no válida", detail: "El token no contiene un identificador de usuario válido.", statusCode: 401);
+            await sender.Send(new AssignPlanCommand(id, req.NewPlan, adminId, req.Reason), ct);
+            return Results.Ok();
+        })
+        .WithName("AssignPlan")
+        .Produces(200)
+        .ProducesProblem(400)
+        .ProducesProblem(401)
+        .ProducesProblem(403)
+        .ProducesProblem(404);
+
+        group.MapPatch("/{id:guid}/suspend", async (
+            Guid id,
+            SuspendCompanyRequest req,
+            ISender sender,
+            HttpContext ctx,
+            CancellationToken ct) =>
+        {
+            if (!TryGetAdminId(ctx, out var adminId))
+                return Results.Problem(title: "Identidad no válida", detail: "El token no contiene un identificador de usuario válido.", statusCode: 401);
+            await sender.Send(new SuspendCompanyCommand(id, adminId, req.Reason), ct);
+            return Results.Ok();
+        })
+        .WithName("SuspendCompany")
+        .Produces(200)
+        .ProducesProblem(400)
+        .ProducesProblem(401)
+        .ProducesProblem(403)
+        .ProducesProblem(404);
+
+        group.MapPatch("/{id:guid}/flags/{key}", async (
+            Guid id,
+            string key,
+            SetFlagRequest req,
+            IFeatureFlagService featureFlagService,
+            ICompanyRepository repo,
+            HttpContext ctx,
+            CancellationToken ct) =>
+        {
+            if (!TryGetAdminId(ctx, out var adminId))
+                return Results.Problem(title: "Identidad no válida", detail: "El token no contiene un identificador de usuario válido.", statusCode: 401);
+
+            var company = await repo.FindByIdAsync(id, ct);
+            if (company is null)
+                return Results.Problem(title: "Compañía no encontrada", detail: "La compañía solicitada no existe.", statusCode: 404);
+
+            await featureFlagService.SetFlagAsync(id, key, req.Enabled, adminId, ct);
+            return Results.Ok();
+        })
+        .WithName("SetCompanyFlag")
+        .Produces(200)
+        .ProducesProblem(401)
+        .ProducesProblem(403)
+        .ProducesProblem(404)
+        .ProducesProblem(422);
+    }
+
+    private static bool TryGetAdminId(HttpContext ctx, out Guid adminId)
+    {
+        var sub = ctx.User.FindFirst("sub")?.Value;
+        return Guid.TryParse(sub, out adminId);
+    }
+}
+
+public static class WorkshopCompaniesEndpoints
+{
+    public static void MapWorkshopCompaniesEndpoints(this IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/v1/companies")
+            .RequireAuthorization(new AuthorizeAttribute { Roles = "workshop_admin" });
+
+        group.MapGet("/me", async (
+            HttpContext httpContext,
+            ICompanyRepository repo,
+            CancellationToken ct) =>
+        {
+            if (!TryGetTenantId(httpContext, out var tenantId))
+                return Results.Problem(title: "Identidad no válida", detail: "El token no contiene un tenant_id válido.", statusCode: 401);
+
+            var company = await repo.FindByIdAsync(tenantId, ct);
+            if (company is null)
+                return Results.Problem(title: "Compañía no encontrada", detail: "La compañía de este tenant no existe.", statusCode: 404);
+
+            var settings = company.Settings is null
+                ? null
+                : JsonSerializer.Deserialize<object>(company.Settings);
+
+            return Results.Ok(new
+            {
+                company.Id, company.Name, company.Slug, company.Plan, company.PlanStatus,
+                company.CreatedAt, company.ActivatedAt, Settings = settings
+            });
+        })
+        .WithName("GetMyCompany")
+        .Produces(200)
+        .ProducesProblem(401)
+        .ProducesProblem(403)
+        .ProducesProblem(404);
+
+        group.MapPatch("/me", async (
+            [FromBody] UpdateCompanySettingsRequest request,
+            HttpContext httpContext,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            if (!TryGetTenantId(httpContext, out var tenantId))
+                return Results.Problem(title: "Identidad no válida", detail: "El token no contiene un tenant_id válido.", statusCode: 401);
+
+            await sender.Send(
+                new UpdateCompanySettingsCommand(tenantId, request.Name, request.BrandColors, request.NotificationConfig),
+                ct);
+            return Results.Ok();
+        })
+        .WithName("UpdateMyCompanySettings")
+        .Produces(200)
+        .ProducesProblem(400)
+        .ProducesProblem(401)
+        .ProducesProblem(403)
+        .ProducesProblem(404);
+    }
+
+    private static bool TryGetTenantId(HttpContext ctx, out Guid tenantId)
+    {
+        var raw = ctx.User.FindFirstValue("tenant_id");
+        return Guid.TryParse(raw, out tenantId);
+    }
+}
+
+public record CreateCompanyRequest(string Name, string Slug, Plan Plan);
+public record AssignPlanRequest(Plan NewPlan, string? Reason);
+public record SuspendCompanyRequest(string? Reason);
+public record SetFlagRequest(bool Enabled);
+public record UpdateCompanySettingsRequest(string? Name, Dictionary<string, string>? BrandColors, string? NotificationConfig);

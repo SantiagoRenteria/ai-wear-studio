@@ -7,6 +7,7 @@ public class UsersDbContext(DbContextOptions<UsersDbContext> options) : DbContex
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<UserInvitation> UserInvitations => Set<UserInvitation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,6 +56,23 @@ public class UsersDbContext(DbContextOptions<UsersDbContext> options) : DbContex
                 .HasForeignKey(rt => rt.UserId)
                 .HasConstraintName("fk_refresh_tokens_users")
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserInvitation>(entity =>
+        {
+            entity.ToTable("user_invitations");
+            entity.HasKey(i => i.Id);
+            entity.Property(i => i.Id).HasColumnName("id");
+            entity.Property(i => i.Email).HasColumnName("email").HasMaxLength(320).IsRequired();
+            entity.Property(i => i.Role).HasColumnName("role").HasConversion<string>().HasMaxLength(50);
+            entity.Property(i => i.TenantId).HasColumnName("tenant_id");
+            entity.Property(i => i.InvitedBy).HasColumnName("invited_by");
+            entity.Property(i => i.Token).HasColumnName("token");
+            entity.Property(i => i.ExpiresAt).HasColumnName("expires_at");
+            entity.Property(i => i.ConsumedAt).HasColumnName("consumed_at");
+            entity.Property(i => i.CreatedAt).HasColumnName("created_at");
+
+            entity.HasIndex(i => i.Token, "uix_user_invitation_token").IsUnique();
         });
     }
 }
