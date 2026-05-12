@@ -4,12 +4,17 @@ using AiWearStudio.Api.Filters;
 using AiWearStudio.Api.Middleware;
 using AiWearStudio.Api.Startup;
 using AiWearStudio.Catalog.Infrastructure;
+using AiWearStudio.Catalog.Infrastructure.Persistence;
 using AiWearStudio.CompanyAdmin;
+using AiWearStudio.CompanyAdmin.Infrastructure;
+using AiWearStudio.CompanyAdmin.Infrastructure.Persistence;
 using AiWearStudio.DesignEngine.Core;
 using AiWearStudio.DesignEngine.Infrastructure;
-using AiWearStudio.CompanyAdmin.Infrastructure;
+using AiWearStudio.DesignEngine.Infrastructure.Persistence;
 using AiWearStudio.Users.Core;
 using AiWearStudio.Users.Infrastructure;
+using AiWearStudio.Users.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -80,8 +85,35 @@ try
 
     var app = builder.Build();
 
+    // Auto-migrate all BC schemas on startup (dev/container convenience)
+    // EnsureSchema() in migrations won't help for the __EFMigrationsHistory table itself,
+    // so we create each schema explicitly before handing off to MigrateAsync.
+    if (app.Environment.IsDevelopment())
+    {
+        using var scope = app.Services.CreateScope();
+        var sp = scope.ServiceProvider;
+
+        var usersCtx = sp.GetRequiredService<UsersDbContext>();
+        await usersCtx.Database.ExecuteSqlRawAsync("CREATE SCHEMA IF NOT EXISTS users");
+        await usersCtx.Database.MigrateAsync();
+
+        var companyAdminCtx = sp.GetRequiredService<CompanyAdminDbContext>();
+        await companyAdminCtx.Database.ExecuteSqlRawAsync("CREATE SCHEMA IF NOT EXISTS company_admin");
+        await companyAdminCtx.Database.MigrateAsync();
+
+        var catalogCtx = sp.GetRequiredService<CatalogDbContext>();
+        await catalogCtx.Database.ExecuteSqlRawAsync("CREATE SCHEMA IF NOT EXISTS catalog");
+        await catalogCtx.Database.MigrateAsync();
+
+        var designEngineCtx = sp.GetRequiredService<DesignEngineDbContext>();
+        await designEngineCtx.Database.ExecuteSqlRawAsync("CREATE SCHEMA IF NOT EXISTS design_engine");
+        await designEngineCtx.Database.MigrateAsync();
+    }
+
     // Seed platform admin if env vars are present
     await DatabaseSeeder.SeedPlatformAdminAsync(app.Services);
+
+    app.MapGet("/health", () => Results.Ok());
 
     app.UseMiddleware<GlobalExceptionMiddleware>();
     app.UseAuthentication();
