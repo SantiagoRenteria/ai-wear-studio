@@ -81,6 +81,17 @@ try
     builder.Services.AddTransient<IStartupFilter, TenantContextCaptureValidationFilter>(
         sp => new TenantContextCaptureValidationFilter(builder.Services));
 
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+            policy.WithOrigins(
+                    "http://localhost:3000",
+                    "http://localhost:5173")
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials());
+    });
+
     builder.Services.AddEndpointsApiExplorer();
 
     var app = builder.Build();
@@ -115,6 +126,7 @@ try
 
     app.MapGet("/health", () => Results.Ok());
 
+    app.UseCors();
     app.UseMiddleware<GlobalExceptionMiddleware>();
     app.UseAuthentication();
     app.UseMiddleware<CompanySuspensionMiddleware>();
