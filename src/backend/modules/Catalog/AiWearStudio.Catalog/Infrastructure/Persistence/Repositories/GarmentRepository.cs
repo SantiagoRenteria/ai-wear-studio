@@ -13,6 +13,7 @@ public class GarmentRepository(CatalogDbContext db) : IGarmentRepository
             .Where(g => !db.TenantGarmentStatuses
                 .Any(s => s.TenantId == tenantId && s.GarmentId == g.Id && !s.IsActive))
             .Include(g => g.ColorVariants.OrderBy(c => c.DisplayOrder))
+            .Include(g => g.Views.OrderBy(v => v.DisplayOrder))
             .OrderBy(g => g.DisplayOrder)
             .Select(g => new GarmentDto(
                 g.Id,
@@ -21,6 +22,10 @@ public class GarmentRepository(CatalogDbContext db) : IGarmentRepository
                 g.ColorVariants
                     .OrderBy(c => c.DisplayOrder)
                     .Select(c => new ColorVariantDto(c.Id, c.ColorName, c.HexCode))
+                    .ToList(),
+                g.Views
+                    .OrderBy(v => v.DisplayOrder)
+                    .Select(v => new GarmentViewDto(v.Id, v.ViewName))
                     .ToList()))
             .ToListAsync(ct);
     }

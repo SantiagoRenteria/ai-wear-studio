@@ -10,18 +10,20 @@ import { ShareModal } from './components/ShareModal';
 import { ResumeBanner } from './components/ResumeBanner';
 import { SaveIndicator } from './components/SaveIndicator';
 import { ReferralModal } from './components/ReferralModal';
+import { GarmentSelector } from './components/GarmentSelector';
 import {
   ShoppingBag, User, HelpCircle, Undo2, Redo2, Sparkles, Upload as UploadIcon,
-  Share2, Download, Gift,
+  Share2, Download, Gift, ArrowLeft,
 } from 'lucide-react';
 import { useStore } from './store/useStore';
-import { PlacementZone } from './types';
+import { Garment, ColorOption, PlacementZone } from './types';
 import { useAutosave } from './hooks/useAutosave';
 import { findResumableSession, type PersistedSession } from './services/persistence';
 import { captureReferrerFromUrl, getOrCreateMyCode } from './services/referrals';
 import { exportPreviewPng } from './services/exporter';
 
 export default function App() {
+  const [appPhase, setAppPhase] = useState<'selection' | 'design'>('selection');
   const [activeTool, setActiveTool] = useState<ToolType>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -30,6 +32,9 @@ export default function App() {
   // HU-12.4 — Banner de retomar / autosave.
   const [showResume, setShowResume] = useState<boolean | null>(null);
   const dragCounter = useRef(0);
+
+  // Acceso token: guest vacío para prototipo local; en producción viene del store de sesión.
+  const accessToken = useStore((s) => s.user?.id ?? '');
 
   const undo = useStore((s) => s.undo);
   const redo = useStore((s) => s.redo);
@@ -43,6 +48,19 @@ export default function App() {
   const duplicateLayer = useStore((s) => s.duplicateLayer);
   const updateLayer = useStore((s) => s.updateLayer);
   const setActiveLayer = useStore((s) => s.setActiveLayer);
+  const setGarment = useStore((s) => s.setGarment);
+  const setColor = useStore((s) => s.setColor);
+  const setSize = useStore((s) => s.setSize);
+  const setQuantity = useStore((s) => s.setQuantity);
+
+  function handleGarmentConfirmed(garment: Garment, color: ColorOption, size: string, quantity: number) {
+    setGarment(garment);
+    setColor(color);
+    setSize(size);
+    setQuantity(quantity);
+    setAppPhase('design');
+    setShowResume(false);
+  }
 
   // HU-12.4 — Autosave: pausamos hasta resolver el banner de retomar.
   const { status, lastSavedAt, adoptSession, startNewSession } = useAutosave({
@@ -262,6 +280,15 @@ export default function App() {
     }
   };
 
+  if (appPhase === 'selection') {
+    return (
+      <GarmentSelector
+        accessToken={accessToken}
+        onConfirm={handleGarmentConfirmed}
+      />
+    );
+  }
+
   return (
     <div
       className="h-screen w-full bg-white flex flex-col overflow-hidden font-sans select-none relative"
@@ -279,9 +306,14 @@ export default function App() {
             </span>
           </div>
           <div className="h-6 w-px bg-slate-200" />
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden md:block">
-            Proyecto: <span className="text-slate-800">Untitled</span>
-          </div>
+          <button
+            onClick={() => setAppPhase('selection')}
+            className="hidden md:flex items-center gap-1.5 text-xs text-slate-500 hover:text-violet-600 transition-colors"
+            title="Cambiar prenda"
+          >
+            <ArrowLeft size={13} />
+            Cambiar prenda
+          </button>
           <div className="h-6 w-px bg-slate-200 hidden md:block" />
           <SaveIndicator status={status} lastSavedAt={lastSavedAt} />
         </div>

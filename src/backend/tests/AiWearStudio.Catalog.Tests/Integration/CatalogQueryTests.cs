@@ -68,6 +68,7 @@ public class CatalogQueryTests : IAsyncLifetime
 
         Assert.Equal(10, garments.Count);
         Assert.All(garments, g => Assert.NotEmpty(g.Colors));
+        Assert.All(garments, g => Assert.NotEmpty(g.Views));
     }
 
     [Fact(DisplayName = "AC-CAT-GARMENTS-FILTERED: Tenant con 2 prendas desactivadas recibe 8 prendas")]

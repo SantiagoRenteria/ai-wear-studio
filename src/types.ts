@@ -125,6 +125,7 @@ export interface HydratePayload {
 export interface AppState extends SessionState, ProductState, DesignState {
   currentView: ViewType;
   activeLayerId: string | null;
+  selectedQuantity: number;
 
   history: LayersSnapshot[];
   redoStack: LayersSnapshot[];
@@ -132,6 +133,7 @@ export interface AppState extends SessionState, ProductState, DesignState {
   setGarment: (garment: Garment) => void;
   setColor: (color: ColorOption) => void;
   setSize: (size: string) => void;
+  setQuantity: (quantity: number) => void;
   setView: (view: ViewType) => void;
   addLayer: (view: ViewType, layer: Omit<Layer, 'id' | 'zIndex'>) => void;
   updateLayer: (view: ViewType, id: string, updates: Partial<Layer>) => void;

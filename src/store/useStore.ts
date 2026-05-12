@@ -30,6 +30,7 @@ export const useStore = create<AppState>((set) => ({
 
   currentView: 'front',
   activeLayerId: null,
+  selectedQuantity: 1,
   layers: { front: [], back: [], left_sleeve: [], right_sleeve: [] },
 
   history: [],
@@ -49,6 +50,7 @@ export const useStore = create<AppState>((set) => ({
   }),
   setColor: (selectedColor) => set({ selectedColor }),
   setSize: (selectedSize) => set({ selectedSize }),
+  setQuantity: (selectedQuantity) => set({ selectedQuantity }),
   setView: (currentView) => set({ currentView, activeLayerId: null }),
 
   addLayer: (view, layerData) => set((state) => {
