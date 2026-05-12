@@ -3,9 +3,10 @@ using AiWearStudio.Api.Endpoints;
 using AiWearStudio.Api.Filters;
 using AiWearStudio.Api.Middleware;
 using AiWearStudio.Api.Startup;
+using AiWearStudio.Catalog.Infrastructure;
 using AiWearStudio.CompanyAdmin;
 using AiWearStudio.CompanyAdmin.Infrastructure;
-using AiWearStudio.Users.Core; // kept for other implicit usages
+using AiWearStudio.Users.Core;
 using AiWearStudio.Users.Infrastructure;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -31,7 +32,8 @@ try
     {
         cfg.RegisterServicesFromAssemblies(
             typeof(AiWearStudio.Users.Core.AssemblyMarker).Assembly,
-            typeof(AiWearStudio.CompanyAdmin.AssemblyMarker).Assembly);
+            typeof(AiWearStudio.CompanyAdmin.AssemblyMarker).Assembly,
+            typeof(AiWearStudio.Catalog.AssemblyMarker).Assembly);
         cfg.AddOpenBehavior(typeof(IdempotencyBehavior<,>));
         cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
         cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
@@ -64,6 +66,7 @@ try
     // Modules
     builder.Services.AddUsersModule(builder.Configuration);
     builder.Services.AddCompanyAdminModule(builder.Configuration);
+    builder.Services.AddCatalogModule(builder.Configuration);
 
     // IStartupFilter: captive dependency detection
     builder.Services.AddTransient<IStartupFilter, TenantContextCaptureValidationFilter>(
@@ -85,6 +88,7 @@ try
     app.MapCompaniesEndpoints();
     app.MapWorkshopCompaniesEndpoints();
     app.MapInvitationsEndpoints();
+    app.MapCatalogEndpoints();
 
     app.Run();
 }
