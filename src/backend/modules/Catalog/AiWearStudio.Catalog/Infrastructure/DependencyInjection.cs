@@ -28,6 +28,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICatalogCache, RedisCatalogCache>();
         services.AddScoped<IGarmentRepository, GarmentRepository>();
+        services.AddScoped<IAdminCatalogRepository, AdminCatalogRepository>();
 
         return services;
     }

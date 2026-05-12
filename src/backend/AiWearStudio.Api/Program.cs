@@ -89,6 +89,7 @@ try
     app.MapWorkshopCompaniesEndpoints();
     app.MapInvitationsEndpoints();
     app.MapCatalogEndpoints();
+    app.MapAdminCatalogEndpoints();
 
     app.Run();
 }

@@ -13,12 +13,17 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> opts, ICatalogC
     public DbSet<PrintTechnique> PrintTechniques => Set<PrintTechnique>();
     public DbSet<PrintZone> PrintZones => Set<PrintZone>();
     public DbSet<TenantGarmentStatus> TenantGarmentStatuses => Set<TenantGarmentStatus>();
+    public DbSet<TenantColorStatus> TenantColorStatuses => Set<TenantColorStatus>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
     {
         var affectedTenants = ChangeTracker.Entries<TenantGarmentStatus>()
             .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
             .Select(e => e.Entity.TenantId)
+            .Union(
+                ChangeTracker.Entries<TenantColorStatus>()
+                    .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+                    .Select(e => e.Entity.TenantId))
             .Distinct()
             .ToList();
 
@@ -92,6 +97,14 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> opts, ICatalogC
             e.HasKey(s => s.Id);
             e.HasIndex(s => new { s.TenantId, s.GarmentId }).IsUnique()
                 .HasDatabaseName("uix_tenant_garment_status");
+        });
+
+        mb.Entity<TenantColorStatus>(e =>
+        {
+            e.ToTable("tenant_color_status");
+            e.HasKey(s => s.Id);
+            e.HasIndex(s => new { s.TenantId, s.ColorVariantId }).IsUnique()
+                .HasDatabaseName("uix_tenant_color_status");
         });
     }
 }
