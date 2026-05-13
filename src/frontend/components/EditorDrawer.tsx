@@ -8,8 +8,11 @@ import { ToolType } from './LeftRail';
 import { useStore } from '../store/useStore';
 import { PlacementZone } from '../types';
 import { generateDesignImages, GeneratedVariation, removeBackground, styleTransferImage } from '../services/gemini';
-import { detectBackground, removeBackgroundLocal, type BgDetection } from '../services/bgRemoval';
+import { detectBackground, type BgDetection } from '../services/bgRemoval';
 import { useRateLimit } from '../hooks/useRateLimit';
+import { useAuthStore } from '../store/useAuthStore';
+import { getCurrentSessionId } from '../services/persistence';
+import { uploadAsset } from '../services/assetsApi';
 import { TextTool } from './TextTool';
 import { ArtTool } from './ArtTool';
 import { ColorPicker } from './ColorPicker';
@@ -18,6 +21,77 @@ import { RateLimitBadge } from './RateLimitBadge';
 import { GARMENT_CATALOG, getSizeMeasurements, genderLabel, getPrimaryZone } from '../data/catalog';
 
 interface EditorDrawerProps { activeTool: ToolType; onClose: () => void; }
+
+async function dataUrlToBlob(dataUrl: string): Promise<Blob | null> {
+  try {
+    return (await fetch(dataUrl)).blob();
+  } catch {
+    return null;
+  }
+}
+
+function runBgRemovalWorker(
+  dataUrl: string,
+  tolerance?: number,
+): Promise<{ cleaned: string; removedRatio: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const { naturalWidth: w, naturalHeight: h } = img;
+
+      if (w === 0 || h === 0) {
+        reject(new Error('imagen sin dimensiones válidas'));
+        return;
+      }
+
+      const auxCanvas = document.createElement('canvas');
+      auxCanvas.width = w;
+      auxCanvas.height = h;
+      const ctx2d = auxCanvas.getContext('2d');
+      if (!ctx2d) {
+        reject(new Error('no se pudo obtener contexto 2d'));
+        return;
+      }
+      ctx2d.drawImage(img, 0, 0);
+      const imageData = ctx2d.getImageData(0, 0, w, h);
+
+      const worker = new Worker(
+        new URL('../workers/bgRemoval.worker.ts', import.meta.url),
+        { type: 'module' },
+      );
+
+      worker.onmessage = (e: MessageEvent<{ buffer?: ArrayBuffer; removedRatio?: number; error?: string }>) => {
+        worker.terminate();
+        if (e.data.error) {
+          reject(new Error(e.data.error));
+          return;
+        }
+        const { buffer, removedRatio } = e.data;
+        if (!buffer || buffer.byteLength !== w * h * 4) {
+          reject(new Error('buffer inválido recibido del worker'));
+          return;
+        }
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = w;
+        outCanvas.height = h;
+        const outCtx = outCanvas.getContext('2d');
+        if (!outCtx) {
+          reject(new Error('no se pudo obtener contexto 2d de salida'));
+          return;
+        }
+        outCtx.putImageData(new ImageData(new Uint8ClampedArray(buffer), w, h), 0, 0);
+        resolve({ cleaned: outCanvas.toDataURL('image/png'), removedRatio: removedRatio ?? 0 });
+      };
+
+      worker.onerror = (err) => { worker.terminate(); reject(err); };
+
+      const buffer = imageData.data.buffer.slice(0);
+      worker.postMessage({ buffer, width: w, height: h, tolerance }, [buffer]);
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
 
 const PROMPT_SUGGESTIONS: { emoji: string; text: string }[] = [
   { emoji: '🐉', text: 'Dragon japones con flores de cerezo' },
@@ -113,6 +187,7 @@ export function EditorDrawer({ activeTool, onClose }: EditorDrawerProps) {
   const [tinting, setTinting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [autoBgRunning, setAutoBgRunning] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [bgDetection, setBgDetection] = useState<BgDetection | null>(null);
   const [showCompare, setShowCompare] = useState(false);
 
@@ -190,12 +265,13 @@ export function EditorDrawer({ activeTool, onClose }: EditorDrawerProps) {
         const detection = await detectBackground(dataUrl);
         setBgDetection(detection);
         if (detection.confidence >= 0.55) {
-          const result = await removeBackgroundLocal(dataUrl);
+          const result = await runBgRemovalWorker(dataUrl);
           setCleanedImage(result.cleaned);
           setTempImage(result.cleaned);
         }
       } catch (err) {
         console.warn('[bgRemoval] auto fallo, sigue manual:', err);
+        setUploadError('No se pudo remover el fondo automáticamente. Puedes intentarlo manualmente.');
       } finally {
         setAutoBgRunning(false);
       }
@@ -215,7 +291,7 @@ export function EditorDrawer({ activeTool, onClose }: EditorDrawerProps) {
           try {
             const detection = await detectBackground(dataUrl);
             if (detection.confidence >= 0.55) {
-              const result = await removeBackgroundLocal(dataUrl);
+              const result = await runBgRemovalWorker(dataUrl);
               finalUrl = result.cleaned;
             }
           } catch { /* swallow */ }
@@ -251,7 +327,7 @@ export function EditorDrawer({ activeTool, onClose }: EditorDrawerProps) {
     }
   };
 
-  const handleConfirmUpload = () => {
+  const handleConfirmUpload = async () => {
     if (!tempImage) return;
     if (isEditing) {
       // En modo edit, los cambios ya se aplicaron en vivo. Solo limpiamos y cerramos draft.
@@ -259,9 +335,26 @@ export function EditorDrawer({ activeTool, onClose }: EditorDrawerProps) {
       onClose();
       return;
     }
+
+    let finalUrl = tempImage;
+    const token = useAuthStore.getState().accessToken;
+    const designId = getCurrentSessionId();
+
+    if (token && designId) {
+      setUploading(true);
+      try {
+        const blob = await dataUrlToBlob(tempImage);
+        if (blob) finalUrl = await uploadAsset(designId, blob, token);
+      } catch (err) {
+        console.warn('[assets] upload fallido, usando data URL local:', err);
+      } finally {
+        setUploading(false);
+      }
+    }
+
     const primaryZone = getPrimaryZone(store.garment.type, store.currentView);
     store.addLayer(store.currentView, {
-      type: 'image', content: tempImage,
+      type: 'image', content: finalUrl,
       x: 50, y: 50, scaleX: tempScale, scaleY: tempScale,
       rotation: tempRotation, placementZone: primaryZone.id,
     });
@@ -561,9 +654,11 @@ export function EditorDrawer({ activeTool, onClose }: EditorDrawerProps) {
             </div>
           </div>
 
-          <button onClick={handleConfirmUpload}
-            className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-violet-500/20 flex items-center justify-center gap-2">
-            <Upload size={16} />{isEditing ? 'Cerrar edicion' : 'Anadir al Diseno'}
+          <button onClick={handleConfirmUpload} disabled={uploading}
+            className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-violet-500/20 flex items-center justify-center gap-2 disabled:opacity-60">
+            {uploading
+              ? <><Loader2 size={16} className="animate-spin" />Subiendo...</>
+              : <><Upload size={16} />{isEditing ? 'Cerrar edicion' : 'Anadir al Diseno'}</>}
           </button>
         </div>
       )}

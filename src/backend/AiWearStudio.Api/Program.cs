@@ -18,7 +18,10 @@ using Microsoft.EntityFrameworkCore;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.HttpOverrides;
+using Minio;
 using Serilog;
+using StackExchange.Redis;
 using System.Text;
 
 Log.Logger = new LoggerConfiguration()
@@ -69,7 +72,34 @@ try
             };
         });
 
-    builder.Services.AddAuthorization();
+    builder.Services.AddAuthorization(opts =>
+    {
+        opts.AddPolicy("RequireVerifiedEmail", policy =>
+            policy.RequireAuthenticatedUser().RequireClaim("email_verified", "true"));
+    });
+
+    // Redis — Singleton compartido entre módulos
+    var redisConn = builder.Configuration["Redis:ConnectionString"]
+        ?? throw new InvalidOperationException("Redis:ConnectionString not configured");
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+        ConnectionMultiplexer.Connect(redisConn));
+
+    // MinIO — P8 patch: throw if endpoint is not configured (same pattern as Redis)
+    var minioEndpoint = builder.Configuration["MinIO:Endpoint"];
+    if (string.IsNullOrWhiteSpace(minioEndpoint))
+        throw new InvalidOperationException("MinIO:Endpoint not configured");
+    var minioAccessKey = builder.Configuration["MinIO:AccessKey"] ?? "minioadmin";
+    var minioSecretKey = builder.Configuration["MinIO:SecretKey"] ?? "minioadmin";
+    var minioPublicBase = builder.Configuration["MinIO:PublicBaseUrl"]
+        ?? throw new InvalidOperationException("MinIO:PublicBaseUrl not configured");
+    _ = minioPublicBase; // validated at startup; consumed by UploadDesignAssetCommandHandler
+    var minioUseSSL = bool.TryParse(builder.Configuration["MinIO:UseSSL"], out var ssl) && ssl;
+    builder.Services.AddSingleton<IMinioClient>(_ =>
+        new MinioClient()
+            .WithEndpoint(minioEndpoint)
+            .WithCredentials(minioAccessKey, minioSecretKey)
+            .WithSSL(minioUseSSL)
+            .Build());
 
     // Modules
     builder.Services.AddUsersModule(builder.Configuration);
@@ -119,12 +149,35 @@ try
         var designEngineCtx = sp.GetRequiredService<DesignEngineDbContext>();
         await designEngineCtx.Database.ExecuteSqlRawAsync("CREATE SCHEMA IF NOT EXISTS design_engine");
         await designEngineCtx.Database.MigrateAsync();
+
+    }
+
+    // Bucket creation runs in all environments.
+    {
+        using var scope = app.Services.CreateScope();
+        var minioClient = scope.ServiceProvider.GetRequiredService<IMinioClient>();
+
+        foreach (var bucket in new[] { "ai-wear-previews", "ai-wear-assets" })
+        {
+            var exists = await minioClient.BucketExistsAsync(
+                new Minio.DataModel.Args.BucketExistsArgs().WithBucket(bucket));
+            if (!exists)
+                await minioClient.MakeBucketAsync(
+                    new Minio.DataModel.Args.MakeBucketArgs().WithBucket(bucket));
+        }
     }
 
     // Seed platform admin if env vars are present
     await DatabaseSeeder.SeedPlatformAdminAsync(app.Services);
 
     app.MapGet("/health", () => Results.Ok());
+
+    // P5 patch: read X-Forwarded-For from trusted proxy so IP-based rate limiting
+    // uses the real client IP rather than the load balancer's IP.
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    });
 
     app.UseCors();
     app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -139,6 +192,7 @@ try
     app.MapCatalogEndpoints();
     app.MapAdminCatalogEndpoints();
     app.MapDesignEngineEndpoints();
+    app.MapPreviewEndpoints();
 
     app.Run();
 }

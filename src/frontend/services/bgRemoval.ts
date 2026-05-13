@@ -167,9 +167,11 @@ export async function removeBackgroundLocal(
   const target = detection.borderColor;
 
   // Flood-fill BFS desde las 4 esquinas. mask[i] = 1 si es fondo.
+  // Cola con índice de cabeza para evitar O(n²) de Array.shift().
   const total = w * h;
   const mask = new Uint8Array(total);
-  const queue: number[] = [];
+  const queue = new Int32Array(total);
+  let head = 0, tail = 0;
   const seedPixels = [
     [0, 0],
     [w - 1, 0],
@@ -180,13 +182,13 @@ export async function removeBackgroundLocal(
     const idx = sy * w + sx;
     if (!mask[idx]) {
       mask[idx] = 1;
-      queue.push(idx);
+      queue[tail++] = idx;
     }
   }
 
   let removed = 0;
-  while (queue.length > 0) {
-    const idx = queue.shift()!;
+  while (head < tail) {
+    const idx = queue[head++];
     const x = idx % w;
     const y = (idx - x) / w;
     const di = idx * 4;
@@ -202,19 +204,19 @@ export async function removeBackgroundLocal(
     // 4-vecinos
     if (x > 0) {
       const n = idx - 1;
-      if (!mask[n]) { mask[n] = 1; queue.push(n); }
+      if (!mask[n]) { mask[n] = 1; queue[tail++] = n; }
     }
     if (x < w - 1) {
       const n = idx + 1;
-      if (!mask[n]) { mask[n] = 1; queue.push(n); }
+      if (!mask[n]) { mask[n] = 1; queue[tail++] = n; }
     }
     if (y > 0) {
       const n = idx - w;
-      if (!mask[n]) { mask[n] = 1; queue.push(n); }
+      if (!mask[n]) { mask[n] = 1; queue[tail++] = n; }
     }
     if (y < h - 1) {
       const n = idx + w;
-      if (!mask[n]) { mask[n] = 1; queue.push(n); }
+      if (!mask[n]) { mask[n] = 1; queue[tail++] = n; }
     }
   }
 
@@ -255,6 +257,83 @@ export async function removeBackgroundLocal(
     removedRatio: removed / total,
     detection,
   };
+}
+
+/**
+ * Versión pura del BFS sin DOM — apta para Web Worker y benchmarks.
+ * Recibe el buffer RGBA ya extraído y devuelve el buffer modificado.
+ */
+export function removeBackgroundData(
+  inputData: Uint8ClampedArray,
+  width: number,
+  height: number,
+  opts: RemoveOptions = {},
+): { data: Uint8ClampedArray; removedRatio: number; detection: BgDetection } {
+  const tolerance = opts.tolerance ?? 38;
+  const featherPasses = opts.featherPasses ?? 1;
+  const data = new Uint8ClampedArray(inputData);
+
+  const corners = sampleCorners(data, width, height);
+  const avg = corners.reduce(
+    (acc, c) => ({ r: acc.r + c.r / 4, g: acc.g + c.g / 4, b: acc.b + c.b / 4 }),
+    { r: 0, g: 0, b: 0 },
+  );
+  const avgDist = corners.reduce(
+    (acc, c) => acc + colorDistance(c.r, c.g, c.b, avg.r, avg.g, avg.b), 0,
+  ) / corners.length;
+  const borderUniformity = Math.max(0, 1 - avgDist / 80);
+  const borderLuminance = relLuminance(avg.r, avg.g, avg.b);
+  const lightBg = borderLuminance > 0.6 ? borderLuminance : 0;
+  const darkUniform = borderLuminance < 0.15 && borderUniformity > 0.85 ? 0.6 : 0;
+  const confidence = Math.max(Math.min(1, borderUniformity * (0.4 + lightBg)), darkUniform);
+  const detection: BgDetection = {
+    borderColor: { r: Math.round(avg.r), g: Math.round(avg.g), b: Math.round(avg.b) },
+    borderUniformity, borderLuminance, confidence,
+  };
+
+  const total = width * height;
+  const mask = new Uint8Array(total);
+  const queue = new Int32Array(total);
+  let head = 0, tail = 0;
+  const seedPixels = [[0, 0], [width - 1, 0], [0, height - 1], [width - 1, height - 1]];
+  for (const [sx, sy] of seedPixels) {
+    const idx = sy * width + sx;
+    if (!mask[idx]) { mask[idx] = 1; queue[tail++] = idx; }
+  }
+
+  let removed = 0;
+  while (head < tail) {
+    const idx = queue[head++];
+    const x = idx % width;
+    const y = (idx - x) / width;
+    const di = idx * 4;
+    const dist = colorDistance(data[di], data[di + 1], data[di + 2], avg.r, avg.g, avg.b);
+    if (dist > tolerance) { mask[idx] = 0; continue; }
+    removed++;
+    if (x > 0) { const n = idx - 1; if (!mask[n]) { mask[n] = 1; queue[tail++] = n; } }
+    if (x < width - 1) { const n = idx + 1; if (!mask[n]) { mask[n] = 1; queue[tail++] = n; } }
+    if (y > 0) { const n = idx - width; if (!mask[n]) { mask[n] = 1; queue[tail++] = n; } }
+    if (y < height - 1) { const n = idx + width; if (!mask[n]) { mask[n] = 1; queue[tail++] = n; } }
+  }
+
+  for (let i = 0; i < total; i++) {
+    if (mask[i]) data[i * 4 + 3] = 0;
+  }
+
+  for (let pass = 0; pass < featherPasses; pass++) {
+    const snapshot = new Uint8Array(total);
+    for (let i = 0; i < total; i++) snapshot[i] = mask[i];
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        if (snapshot[idx]) continue;
+        const neighbors = snapshot[idx - 1] + snapshot[idx + 1] + snapshot[idx - width] + snapshot[idx + width];
+        if (neighbors >= 2) data[idx * 4 + 3] = Math.min(data[idx * 4 + 3], 160);
+      }
+    }
+  }
+
+  return { data, removedRatio: removed / total, detection };
 }
 
 // Variante interna que no recarga la imagen — reusa el ImageData ya extraido.

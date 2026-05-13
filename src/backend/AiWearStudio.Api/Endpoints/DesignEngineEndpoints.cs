@@ -1,5 +1,7 @@
+using AiWearStudio.DesignEngine.Core.Application.Commands.UploadDesignAsset;
 using AiWearStudio.DesignEngine.Core.Application.Commands.UpsertDesignDraft;
 using AiWearStudio.DesignEngine.Core.Application.Queries.GetDesignDraft;
+using AiWearStudio.DesignEngine.Core.Application.Services;
 using AiWearStudio.SharedKernel.Domain;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -67,6 +69,50 @@ public static class DesignEngineEndpoints
         .ProducesProblem(400)
         .ProducesProblem(401)
         .ProducesProblem(412);
+
+        group.MapPost("/{designId:guid}/assets", async (
+            Guid designId,
+            IFormFile? file,
+            HttpContext ctx,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            if (!TryGetTenantAndUser(ctx, out var tenantId, out _))
+                return Results.Problem(title: "Identidad no válida", statusCode: 401);
+
+            if (file is null)
+                return Results.Problem(title: "Archivo requerido", statusCode: 400);
+
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms, ct);
+            ms.Position = 0;
+
+            // Validate size after buffering — file.Length can be -1 for streamed multipart.
+            AssetValidator.ValidateSize(ms.Length);
+
+            var contentType = AssetValidator.DetectContentType(ms);
+            ms.Position = 0;
+
+            if (contentType == "image/svg+xml")
+            {
+                using var reader = new StreamReader(ms, leaveOpen: true);
+                var svgText = reader.ReadToEnd();
+                AssetValidator.ValidateSvgContent(svgText);
+                ms.Position = 0;
+            }
+
+            var result = await sender.Send(
+                new UploadDesignAssetCommand(designId, tenantId, ms, contentType, ms.Length), ct);
+
+            return Results.Created(
+                $"/api/v1/designs/{designId}/assets/{result.AssetId}",
+                new { assetId = result.AssetId, url = result.Url });
+        })
+        .WithName("UploadDesignAsset")
+        .Produces(201)
+        .ProducesProblem(400)
+        .ProducesProblem(401)
+        .DisableAntiforgery();
     }
 
     private static bool TryGetTenant(HttpContext ctx, out Guid tenantId)

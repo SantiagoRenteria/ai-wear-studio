@@ -75,7 +75,25 @@ Issues found during review but explicitly out of scope for the story that surfac
 
 ---
 
+## From code review of spec-1-7 (2026-05-12)
+
+- **Refresh token no persiste en DB/Redis** — `RegisterCustomerCommandHandler` genera `refreshToken` pero no lo almacena; cualquier refresh requiere que el token esté en BD o Redis; pre-existing desde Story 1.2, no introducido por Story 1.7. Resolver en hardening de auth.
+- **VerifyEmail silencioso si entidad no tracked** — `VerifyEmailCommandHandler` llama `user.VerifyEmail()` + `SaveChangesAsync`; si `FindByIdAsync` usa `AsNoTracking`, la modificación no persiste. Verificar `UserRepository.FindByIdAsync` usa tracking para comandos.
+- **useAuthStore descarta refreshToken** — el parámetro `_refreshToken` en `login()` es descartado; si los tokens viajan por httpOnly cookies el frontend no necesita almacenarlo, pero si viajan en body se pierde. Confirmar estrategia final de cookies vs body en Story auth hardening.
+- **ConnectionMultiplexer.Connect síncrono** — `ConnectionMultiplexer.Connect(redisConn)` en `Program.cs` es síncrono y no tiene `abortConnect=false`; si Redis no está disponible al startup, la app no arranca. Pre-existing desde Story 2.1. Resolver en hardening de infraestructura.
+- **Resend rate limit sin scope de tenant** — clave `resend:limit:{email}` es global; si un email existe como Customer B2C y usuario interno B2B en distintos tenants comparten el mismo contador. No aplica para MVP. Evaluar al implementar multi-tenant strict email reuse.
+- **Usuarios existentes con email_verified=false post-migración** — todos los usuarios previos (PlatformAdmin, WorkshopAdmin, Operator) tendrán `email_verified=false` tras la migración. `RequireVerifiedEmail` no se aplica en Story 1.7, pero Story 3.3 debe implementar exención de rol para usuarios internos o flujo alternativo de verificación para invitados.
+
+---
+
 ## Tenant Claim Silent Failure Observability
 **Surfaced in:** Story 2.1 — Backend del Catálogo con Seeds del Prototipo
 **File:** `CatalogEndpoints.cs:TryGetTenantId`
 **Detail:** When `tenant_id` JWT claim is absent or non-GUID, the endpoint returns 401 but logs nothing. Add a structured log entry (`catalog.auth.invalid_tenant_claim path={Path}`) to aid debugging of auth integration issues.
+
+---
+
+## Deferred from: code review of spec-3-2 (2026-05-13)
+
+- **`fetch` en `assetsApi.ts` sin timeout** — `uploadAsset` no establece `AbortController` + timeout; si el backend no responde, `setUploading(true)` nunca se limpia. Pre-existing pattern del proyecto; resolver en hardening de frontend o cuando se adopte axios/ky globalmente. [`assetsApi.ts`]
+- **Endpoint POST `/assets` sin atributo `[Authorize]`** — El endpoint usa `TryGetTenantAndUser` para verificar autenticación (efectivamente un 401 manual), pero no está decorado con `[Authorize]`. Funcionalmente equivalente para el MVP; mejora arquitectural para consistencia y futuro soporte de middleware de auditoría. [`DesignEngineEndpoints.cs`]

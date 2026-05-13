@@ -1,6 +1,8 @@
 using AiWearStudio.DesignEngine.Core.Domain.Repositories;
 using AiWearStudio.DesignEngine.Infrastructure.Persistence;
 using AiWearStudio.DesignEngine.Infrastructure.Persistence.Repositories;
+using AiWearStudio.DesignEngine.Infrastructure.Storage;
+using AiWearStudio.SharedKernel.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +21,7 @@ public static class DependencyInjection
             opts.UseNpgsql(connStr));
 
         services.AddScoped<IDesignDraftRepository, DesignDraftRepository>();
+        services.AddScoped<IAssetStorage, MinioAssetStorage>();
 
         return services;
     }
