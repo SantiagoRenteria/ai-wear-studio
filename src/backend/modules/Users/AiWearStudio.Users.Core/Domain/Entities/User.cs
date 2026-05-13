@@ -12,6 +12,8 @@ public class User : AggregateRoot
     public bool IsActive { get; private set; } = true;
     public DateTime? DeletedAt { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
+    public bool EmailVerified { get; private set; } = false;
+    public DateTime? EmailVerifiedAt { get; private set; }
 
     private User() { }
 
@@ -58,5 +60,11 @@ public class User : AggregateRoot
     {
         IsActive = false;
         DeletedAt = DateTime.UtcNow;
+    }
+
+    public void VerifyEmail()
+    {
+        EmailVerified = true;
+        EmailVerifiedAt = DateTime.UtcNow;
     }
 }

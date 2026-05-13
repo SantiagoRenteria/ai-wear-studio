@@ -1,5 +1,6 @@
 using AiWearStudio.SharedKernel.Common;
 using AiWearStudio.Users.Core.Application.Interfaces;
+using AiWearStudio.Users.Core.Application.Services;
 using AiWearStudio.Users.Core.Domain.Entities;
 using AiWearStudio.Users.Core.Domain.Repositories;
 using AiWearStudio.Users.Infrastructure.Persistence;
@@ -22,10 +23,14 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IUserInvitationRepository, UserInvitationRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddScoped<IPasswordHasherService, PasswordHasherService>();
         services.AddScoped<ITenantAccessRevocationService, TenantAccessRevocationService>();
+        services.AddScoped<IEmailSender, LoggingEmailSender>();
+        services.AddScoped<IEmailVerificationTokenService, RedisEmailVerificationTokenService>();
+        services.AddSingleton<IAiRateLimiter, RedisAiRateLimiter>();
 
         return services;
     }

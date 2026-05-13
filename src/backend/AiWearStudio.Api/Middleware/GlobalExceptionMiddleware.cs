@@ -59,6 +59,31 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             await WriteProblemAsync(context, 409, "Slug duplicado",
                 "El slug especificado ya está en uso por otra compañía.");
         }
+        catch (DomainException ex) when (ex.Message.StartsWith("INVITATION_NOT_FOUND"))
+        {
+            await WriteProblemAsync(context, 404, "Invitación no encontrada",
+                "El token de invitación no existe.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("INVITATION_EXPIRED"))
+        {
+            await WriteProblemAsync(context, 422, "Invitación expirada",
+                "La invitación ha expirado. Solicita una nueva invitación.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("INVITATION_ALREADY_CONSUMED"))
+        {
+            await WriteProblemAsync(context, 409, "Invitación ya utilizada",
+                "Esta invitación ya fue aceptada anteriormente.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("DUPLICATE_INVITATION"))
+        {
+            await WriteProblemAsync(context, 409, "Invitación duplicada",
+                "Ya existe una invitación pendiente para este email en el tenant.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("INVITE_SCOPE_VIOLATION"))
+        {
+            await WriteProblemAsync(context, 403, "Acceso no permitido",
+                "Solo puedes invitar a usuarios de tu propio tenant.");
+        }
         catch (DomainException ex) when (ex.Message.StartsWith("DUPLICATE_EMAIL"))
         {
             await WriteProblemAsync(context, 409, "Email ya registrado",
@@ -68,6 +93,46 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
         {
             await WriteProblemAsync(context, 409, "Conflicto de rol",
                 "Este email ya está registrado como usuario interno y no puede usarse para registro de cliente.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("GARMENT_VIEW_NOT_FOUND"))
+        {
+            await WriteProblemAsync(context, 404, "Vista no encontrada",
+                "La combinación de prenda y vista solicitada no existe.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("EMAIL_VERIFICATION_TOKEN_INVALID"))
+        {
+            await WriteProblemAsync(context, 400, "Token inválido",
+                "El token de verificación no es válido o ha expirado.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("RESEND_LIMIT_EXCEEDED"))
+        {
+            await WriteProblemAsync(context, 429, "Límite excedido",
+                "Has excedido el número máximo de reenvíos. Intenta de nuevo en 15 minutos.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("INVALID_FILE_TYPE"))
+        {
+            await WriteProblemAsync(context, 400, "Tipo de archivo inválido",
+                "Solo se aceptan imágenes PNG, JPEG o SVG.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("FILE_TOO_LARGE"))
+        {
+            await WriteProblemAsync(context, 400, "Archivo demasiado grande",
+                "El archivo de preview no puede superar los 5 MB.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("PREVIEW_RATE_LIMIT_EXCEEDED"))
+        {
+            await WriteProblemAsync(context, 429, "Límite de previews excedido",
+                "Has alcanzado el límite de previews por minuto. Intenta de nuevo en un momento.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("ASSET_TOO_LARGE"))
+        {
+            await WriteProblemAsync(context, 400, "Archivo demasiado grande",
+                "El archivo no puede superar los 10 MB.");
+        }
+        catch (DomainException ex) when (ex.Message.StartsWith("SVG_UNSAFE_CONTENT"))
+        {
+            await WriteProblemAsync(context, 400, "SVG no permitido",
+                "El archivo SVG contiene contenido activo que no está permitido.");
         }
         catch (DomainException ex)
         {

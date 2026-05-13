@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+tests/
+**/TestResults/
+*.user
+.vs/
+api_out.txt
+api_err.txt
+migration_*.sql

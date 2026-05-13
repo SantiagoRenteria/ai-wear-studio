@@ -1,5 +1,11 @@
 ---
-stepsCompleted: ["step-01-init", "step-02-discovery", "step-02b-vision", "step-02c-executive-summary", "step-03-success", "step-04-journeys", "step-05-domain", "step-06-innovation", "step-07-project-type", "step-08-scoping", "step-09-functional", "step-10-nonfunctional", "step-11-polish"]
+stepsCompleted: ["step-01-init", "step-02-discovery", "step-02b-vision", "step-02c-executive-summary", "step-03-success", "step-04-journeys", "step-05-domain", "step-06-innovation", "step-07-project-type", "step-08-scoping", "step-09-functional", "step-10-nonfunctional", "step-11-polish", "step-e-01-discovery", "step-e-02-review", "step-e-03-edit"]
+lastEdited: "2026-05-12"
+editHistory:
+  - date: "2026-05-12"
+    changes: "Modelo de auth diferida: sesión anónima (browse+design sin registro), auth requerida solo en checkout. Agregados FR8b (UI frontend auth), FR8c (sesión invitada B2C), FR8d (auth diferida al checkout). Journey 2 actualizado (registro movido al clímax). Mapa de momentos UX revisado. Product Scope: acceso sin registro documentado. FR9 y NFR-SEC-03 actualizados con límites anónimo/autenticado."
+  - date: "2026-05-12"
+    changes: "Revisión del modelo de acceso: IA requiere login + verificación de email (no más acceso anónimo a IA). FR8c revisado — acceso anónimo limitado a catálogo + preview de logo (sin herramientas de IA). Agregado FR8e (verificación de email obligatoria). NFR-SEC-03 actualizado: sin rate limit anónimo para IA, 10 gen/día para usuarios verificados. Journey 2 actualizado con flujo registro-antes-de-IA. Mapa de momentos UX revisado. Servicio de email añadido al tech stack."
 releaseMode: phased
 classification:
   projectType: "saas_b2b"
@@ -85,7 +91,7 @@ El mercado de impresión bajo demanda crece al 24.81% anual (US$12.96B en 2025, 
 
 - Generación de imagen con IA (Gemini): < 15 segundos P95 bajo carga normal (< 30 s P99; hard timeout 45 s — ver NFR-PERF-01b).
 - Disponibilidad del portal: > 99.0% en Fase 1 (operación propia), > 99.5% en Fase 2 (SaaS comercial). Targets por fase alineados con NFR-REL-01.
-- Time-to-first-order para nuevo cliente: < 5 minutos desde registro hasta pedido confirmado.
+- Time-to-first-order: < 5 minutos desde el primer clic en "diseñar" hasta el pedido confirmado (el flujo de registro o checkout como invitado está incluido en este presupuesto de tiempo).
 - Submit atómico sin pérdida de datos: 0 pedidos perdidos por error de transacción entre `Orders`, `DesignEngine` y `ProductionQueue`.
 - Tasa de alertas del validador de calidad que previenen reimpresiones: seguimiento mensual desde el día 1 — objetivo a largo plazo: 0 reimpresiones por errores prevenibles.
 
@@ -108,6 +114,7 @@ El mercado de impresión bajo demanda crece al 24.81% anual (US$12.96B en 2025, 
 ### MVP — Mínimo Viable
 
 **Portal del Cliente (B2C):**
+- **Acceso sin registro:** exploración de catálogo y previsualización de logo sobre prenda disponible sin crear cuenta. Las herramientas de diseño con IA requieren registro y verificación de email. El registro se solicita al intentar usar IA o al proceder al checkout.
 - Selección de prenda, color y talla del catálogo (10 prendas, paletas por tipo)
 - Canvas de diseño local: generación de imagen con IA (Gemini), herramienta de texto, carga de imagen/logo con remoción de fondo
 - Diseño multi-vista (frente, espalda, mangas según prenda)
@@ -169,13 +176,13 @@ El mercado de impresión bajo demanda crece al 24.81% anual (US$12.96B en 2025, 
 
 **Escena inicial:** Valentina quiere regalarle una camiseta personalizada a su mejor amiga. Busca en Google, encuentra AI Wear Studio. Nunca ha usado Photoshop ni Canva. Su experiencia previa: envió una foto por WhatsApp y recibió algo irreconocible.
 
-**Rising action:** Se registra en 2 minutos. Selecciona camiseta oversize negra. Escribe: *"un ramo de flores silvestres en acuarela, colores pastel"*. En 12 segundos tiene una imagen. La centra en el pecho. Agrega el nombre de su amiga en tipografía delicada. El validador detecta bajo contraste texto/tela — lo cambia a blanco. Ve el try-on sobre una modelo editorial. Se emociona. Cierra la pestaña sin confirmar — al volver, el diseño sigue ahí (autoguardado local en Zustand).
+**Rising action:** Entra directo al catálogo — sin formulario, sin barrera. Selecciona camiseta oversize negra. Sube el logo de su amiga — ve la previsualización sobre la prenda en segundos. Se emociona. Hace clic en "Diseñar con IA" para añadir más elementos. El sistema presenta un panel lateral: *"Crea tu cuenta para diseñar con IA — sin perder tu selección."* Se registra en 30 segundos (email + contraseña). Recibe el email de verificación, lo confirma con un clic. Vuelve al diseñador con su logo ya cargado. Escribe: *"un ramo de flores silvestres en acuarela, colores pastel"*. En 12 segundos tiene una imagen. La centra en el pecho. Agrega el nombre de su amiga en tipografía delicada. El validador detecta bajo contraste texto/tela — lo cambia a blanco. Ve el try-on sobre una modelo editorial.
 
-**Clímax:** Hace checkout con su dirección en Bogotá. El sistema la valida y autocompleta el barrio. Confirma talla M. Submit. El sistema genera el snapshot del diseño y lo envía al taller como pedido. Valentina recibe email de confirmación con el mockup aprobado adjunto — el archivo exacto que entró a producción.
+**Clímax:** Hace checkout. Ya tiene cuenta. Ingresa su dirección en Bogotá. El sistema la valida y autocompleta el barrio. Confirma talla M. Submit. El sistema genera el snapshot del diseño y lo envía al taller como pedido. Valentina recibe email de confirmación con el mockup aprobado adjunto — el archivo exacto que entró a producción.
 
 **Resolución:** Notificaciones por email en cada fase. Al día siguiente: "Tu prenda está lista para recoger." La prenda es exactamente lo que vio en pantalla. Le manda el link a tres amigas.
 
-**Capacidades reveladas:** Registro público, generador IA, herramienta de texto, validador de calidad, try-on, autoguardado local, checkout con validación de dirección, email como canal de notificación, mockup aprobado adjunto en confirmación.
+**Capacidades reveladas:** Acceso sin registro al catálogo + previsualización de logo, registro liviano (email + contraseña), verificación de email, generador IA (usuarios verificados), herramienta de texto, validador de calidad, try-on, checkout con validación de dirección, email como canal de notificación, mockup aprobado adjunto en confirmación.
 
 ---
 
@@ -279,11 +286,15 @@ Número de pedido, fecha y hora de confirmación, nombre completo del cliente, d
 
 | Momento | Estado emocional | Acción |
 |---------|-----------------|--------|
-| Entrada al portal | Sin apego, disponible | Verificación edad + ToS (3 tarjetas, 25 seg) |
-| Diseñando | Fluido, creativo | Sin interrupciones — zona sagrada |
-| Transición diseño→pedido | Satisfecho, emocionado | Aviso no-retracto como confirmación de autoría |
+| Entrada al portal | Sin apego, disponible | Acceso directo sin barreras — catálogo y preview de logo sin registro |
+| Preview anónimo | Curiosidad, descubrimiento | Subir logo y ver previsualización sobre prenda — el "momento wow" |
+| Registro para IA | Motivado, decidido | Panel lateral no intrusivo: "Un paso para diseñar con IA" — la selección se preserva |
+| Verificación de email | Comprometido | Banner suave con CTA claro — acceso parcial inmediato al catálogo mientras verifica |
+| Diseñando con IA | Fluido, creativo | Sin interrupciones — zona sagrada |
+| Transición diseño→pedido | Satisfecho, emocionado | Aviso no-retracto + verificación de edad + ToS (primer momento de compromiso real — 3 tarjetas, 40 seg) |
+| Checkout | Decidido | Confirmación de dirección y talla — para invitados: opción de continuar con nombre + teléfono |
 | Confirmación final | Decidido | Checkbox formal, ya procesado |
-| Post-pedido | Aliviado | TTL del mockup como invitación a crear cuenta |
+| Post-pedido | Aliviado | Email de confirmación con mockup adjunto; invitación a crear cuenta si fue invitado |
 
 ### Dependencias Críticas y Contingencias
 
@@ -647,6 +658,7 @@ La razón para 404 y no 403 en cross-tenant: un 403 confirma al attacker que el 
 | Twilio SMS | Notificaciones de estado al cliente | Twilio REST API | ✅ Activo |
 | OpenStreetMap | Embed de mapa en checkout | Tile layer OSM (sin API key) | ✅ Activo |
 | S3-compatible Blob Storage | Previews y assets de diseño | AWS S3 / Backblaze / MinIO local | ✅ Activo |
+| Servicio de email | Emails transaccionales — verificación de cuenta, confirmación de pedido, notificaciones | SendGrid / SMTP configurable | ⚠️ Fase 1 — pendiente configurar |
 | Pasarela de pagos | Cobro de suscripciones y pedidos | TBD (Stripe / MercadoPago) | ❌ Fase 2 |
 | WhatsApp Business API | Canal de notificaciones alternativo | Meta Business API | ❌ Fase 2 |
 | DIAN / SAT / AFIP / SII / SUNAT | Facturación electrónica por país | TBD por país | ❌ Fase 2 — **bloqueador de ventas B2B en CO/MX/AR** |
@@ -697,12 +709,16 @@ Nombrada explícitamente como decisión, no como omisión:
 - **FR6:** El sistema revoca el acceso de un usuario desactivado de forma inmediata, incluyendo la invalidación de tokens activos existentes sin requerir que el usuario cierre sesión.
 - **FR7:** Un platform_admin puede crear, editar, activar y suspender cuentas de workshop_admin.
 - **FR8:** Un workshop_admin puede invitar y desactivar cuentas de operario dentro de su compañía.
+- **FR8b:** El portal del cliente presenta pantallas de inicio de sesión y registro de cuenta integradas con el sistema de autenticación JWT del backend, accesibles tanto desde el flujo de checkout como destino directo de navegación.
+- **FR8c:** Un usuario no autenticado puede explorar el catálogo de prendas y cargar su propio logo o imagen para ver una previsualización básica sobre la prenda seleccionada, sin crear una cuenta. La previsualización es temporal y no se persiste entre sesiones. Las herramientas de diseño con IA generativa requieren registro y verificación de email. *(El modo presencial — operario asistiendo a un cliente físico — siempre opera con la cuenta del operario autenticada.)*
+- **FR8d:** El sistema solicita autenticación cuando el usuario intenta usar las herramientas de diseño con IA, confirmar un pedido, o acceder a funciones que requieren identidad persistente (historial de pedidos, configuración de perfil). Al intentar confirmar un pedido, un usuario no autenticado es redirigido al flujo de registro o inicio de sesión — o puede completar el pedido como invitado proporcionando nombre y número de teléfono — antes de continuar el checkout.
+- **FR8e:** El sistema requiere que todo usuario externo recién registrado verifique su dirección de email antes de poder usar las herramientas de diseño con IA. Al registrarse, el sistema envía un email con un enlace de verificación de un solo uso (TTL 24 horas). Las cuentas en estado `PENDING_VERIFICATION` tienen acceso al catálogo y a la previsualización de logo, pero no a la generación de imágenes con IA ni al historial de pedidos.
 
 ---
 
 ### Catálogo de Prendas
 
-- **FR9:** Un cliente puede explorar el catálogo de prendas disponibles con sus variantes de color para la compañía activa.
+- **FR9:** Un cliente puede explorar el catálogo de prendas disponibles con sus variantes de color para la compañía activa, sin requerir autenticación previa.
 - **FR10:** Un cliente puede seleccionar tipo de prenda, color, talla y cantidad de unidades antes de iniciar el diseño.
 - **FR11:** El sistema muestra las zonas de impresión disponibles y la técnica recomendada para cada combinación prenda–vista seleccionada, de forma que el cliente comprenda qué área puede decorar y con qué técnica.
 - **FR12:** El sistema presenta el diseño del cliente posicionado sobre la prenda seleccionada en cada vista disponible (frente, espalda, mangas, pecho).
@@ -781,7 +797,7 @@ Nombrada explícitamente como decisión, no como omisión:
 
 ---
 
-*Total: 54 requisitos funcionales · 8 áreas de capacidad · Cobertura validada por UX, ingeniería y análisis de negocio · Cada FR es testeable de forma independiente y libre de detalles de implementación.*
+*Total: 57 requisitos funcionales · 8 áreas de capacidad · Cobertura validada por UX, ingeniería y análisis de negocio · Cada FR es testeable de forma independiente y libre de detalles de implementación.*
 
 ---
 
@@ -812,7 +828,7 @@ Nombrada explícitamente como decisión, no como omisión:
 |----|-----------|
 | NFR-SEC-01 | Toda comunicación cliente-servidor sobre HTTPS/TLS 1.2+. Sin endpoints HTTP en producción. |
 | NFR-SEC-02 | Autenticación JWT con expiración ≤ 60 minutos y refresh token rotativo. Tokens invalidables en logout. |
-| NFR-SEC-03 | Rate limiting por usuario autenticado en endpoints de generación IA. En Phase 1: 10 generaciones gratuitas/día por cuenta; bypass permanente post-confirmación de pedido. |
+| NFR-SEC-03 | Los endpoints de generación IA requieren autenticación JWT activa y verificación de email confirmada (`email_verified = true`). Usuarios sin cuenta o con cuenta no verificada no pueden acceder a generación IA. Usuarios autenticados y verificados: máximo 10 generaciones por día por cuenta (ventana deslizante 24h, contador en Redis anclado al `userId`). |
 | NFR-SEC-04 | Aislamiento de tenants en todas las queries de base de datos. Test de aceptación obligatorio: **AC-RBAC-CROSS-TENANT** — operario de Tenant A solicitando recurso de Tenant B → respuesta 404 (no 403, no 200). |
 | NFR-SEC-05 | API keys de Gemini y secretos de infraestructura almacenados en variables de entorno o gestor de secretos. Nunca en código fuente ni en el bundle del cliente. |
 | NFR-SEC-06 | Inputs de usuario sanitizados antes de procesamiento. Prompts de IA con sistema de filtrado básico de contenido en Phase 1; moderación automática antes del lanzamiento público. |

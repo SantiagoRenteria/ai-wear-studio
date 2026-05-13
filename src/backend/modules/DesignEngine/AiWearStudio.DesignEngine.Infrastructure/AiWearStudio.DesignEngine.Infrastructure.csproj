@@ -5,6 +5,19 @@
     <ProjectReference Include="..\..\..\infrastructure\AiWearStudio.SharedKernel\AiWearStudio.SharedKernel.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.4" />
+    <PackageReference Include="Minio" Version="6.*" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

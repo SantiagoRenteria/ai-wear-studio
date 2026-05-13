@@ -82,6 +82,16 @@ namespace AiWearStudio.Users.Infrastructure.Migrations
                         .HasColumnType("character varying(320)")
                         .HasColumnName("email");
 
+                    b.Property<bool>("EmailVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("email_verified");
+
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("email_verified_at");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
@@ -112,6 +122,57 @@ namespace AiWearStudio.Users.Infrastructure.Migrations
                         .HasFilter("role = 'Customer'");
 
                     b.ToTable("users", "users");
+                });
+
+            modelBuilder.Entity("AiWearStudio.Users.Core.Domain.Entities.UserInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consumed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("InvitedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invited_by");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("role");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("Token")
+                        .HasColumnType("uuid")
+                        .HasColumnName("token");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "Token" }, "uix_user_invitation_token")
+                        .IsUnique();
+
+                    b.ToTable("user_invitations", "users");
                 });
 
             modelBuilder.Entity("AiWearStudio.Users.Core.Domain.Entities.RefreshToken", b =>
