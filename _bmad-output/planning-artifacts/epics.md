@@ -2,9 +2,15 @@
 stepsCompleted: ["step-01-validate-prerequisites", "step-02-design-epics", "step-03-create-stories", "step-04-final-validation"]
 status: complete
 completedAt: "2026-05-08"
+lastUpdated: "2026-05-12"
 inputDocuments:
   - "_bmad-output/planning-artifacts/prd.md"
   - "_bmad-output/planning-artifacts/architecture.md"
+changeLog:
+  - date: "2026-05-12"
+    changes: "Incorporados FR8b/FR8c/FR8d (sesión anónima, auth diferida, UI auth frontend). Agregada Story 1.7. Actualizada Story 2.1 AC para acceso anónimo al catálogo. NFR-SEC-03 y UX-08 actualizados. Total FRs: 54 → 57."
+  - date: "2026-05-12"
+    changes: "Revisión del modelo de acceso: IA requiere login + verificación de email. FR8c revisado (solo catálogo + preview de logo sin IA). Agregado FR8e (verificación de email obligatoria). NFR-SEC-03 actualizado. Story 1.7 reescrita: flujo de verificación de email, preview anónimo de logo, guard en endpoints IA, rate limiting por userId. Epic 1 descripción actualizada. Total FRs: 57 → 58."
 ---
 
 # AI Wear Studio - Epic Breakdown
@@ -29,6 +35,10 @@ Este documento desglosa de forma completa las épicas e historias de usuario par
 - FR6: El sistema revoca el acceso de un usuario desactivado de forma inmediata, incluyendo la invalidación de tokens activos sin requerir cierre de sesión.
 - FR7: Un platform_admin puede crear, editar, activar y suspender cuentas de workshop_admin.
 - FR8: Un workshop_admin puede invitar y desactivar cuentas de operario dentro de su compañía.
+- FR8b: El portal del cliente presenta pantallas de inicio de sesión y registro de cuenta integradas con el sistema de autenticación JWT del backend, accesibles desde el flujo de checkout y como destino directo de navegación.
+- FR8c: Un usuario no autenticado puede explorar el catálogo de prendas y cargar su propio logo o imagen para ver una previsualización básica sobre la prenda seleccionada, sin crear una cuenta. La previsualización es temporal y no persiste entre sesiones. Las herramientas de diseño con IA requieren registro y verificación de email. (El modo presencial siempre opera con la cuenta del operario autenticada.)
+- FR8d: El sistema solicita autenticación cuando el usuario intenta usar las herramientas de diseño con IA, confirmar un pedido, o acceder a funciones que requieren identidad persistente (historial, perfil). Al intentar confirmar, un usuario no autenticado es redirigido al flujo de registro/login — o puede completar el pedido como invitado (nombre + teléfono) — antes de continuar el checkout.
+- FR8e: El sistema requiere que todo usuario externo recién registrado verifique su dirección de email antes de poder usar las herramientas de diseño con IA. Al registrarse, el sistema envía un email con un enlace de verificación de un solo uso (TTL 24 horas). Las cuentas en estado PENDING_VERIFICATION tienen acceso al catálogo y a la previsualización de logo, pero no a la generación de imágenes con IA ni al historial de pedidos.
 
 **Área 2 — Catálogo de Prendas (FR9–FR13)**
 
@@ -97,7 +107,7 @@ Este documento desglosa de forma completa las épicas e historias de usuario par
 - FR47: Un cliente presencial puede revisar y aprobar el diseño en el dispositivo del operario antes de que se confirme el pedido.
 - FR48: Los pedidos originados en modo presencial son procesados con el mismo flujo que los pedidos digitales y aparecen en la misma cola de producción.
 
-**Total: 54 Requisitos Funcionales · 8 áreas de capacidad**
+**Total: 57 Requisitos Funcionales · 8 áreas de capacidad**
 
 ---
 
@@ -118,7 +128,7 @@ Este documento desglosa de forma completa las épicas e historias de usuario par
 
 - NFR-SEC-01: Toda comunicación cliente-servidor sobre HTTPS/TLS 1.2+. Sin endpoints HTTP en producción.
 - NFR-SEC-02: Autenticación JWT con expiración ≤ 60 minutos y refresh token rotativo. Tokens invalidables en logout.
-- NFR-SEC-03: Rate limiting por usuario autenticado en endpoints de generación IA. Fase 1: 10 generaciones gratuitas/día por cuenta; bypass permanente post-confirmación de pedido.
+- NFR-SEC-03: Los endpoints de generación IA requieren autenticación JWT activa y verificación de email confirmada (email_verified = true). Usuarios sin cuenta o con cuenta no verificada no pueden acceder a generación IA. Usuarios autenticados y verificados: máximo 10 generaciones por día por cuenta (ventana deslizante 24h, contador en Redis anclado al userId).
 - NFR-SEC-04: Aislamiento de tenants en todas las queries. AC-RBAC-CROSS-TENANT: operario de Tenant A solicitando recurso de Tenant B → 404 (no 403, no 200).
 - NFR-SEC-05: API keys de Gemini y secretos en variables de entorno o gestor de secretos. Nunca en código fuente ni bundle del cliente.
 - NFR-SEC-06: Inputs de usuario sanitizados antes de procesamiento. Prompts IA con sistema de filtrado básico de contenido.
@@ -213,7 +223,7 @@ Este documento desglosa de forma completa las épicas e historias de usuario par
 - UX-05: Pantalla de transición "Tu diseño está listo" con aviso de no-retracto como confirmación de autoría (no como aviso legal intimidante).
 - UX-06: Onboarding de mayoría de edad: 3 tarjetas simples, 25 segundos — sin texto de documento largo.
 - UX-07: Post-pedido: aviso de TTL del mockup como invitación a crear cuenta ("Tu mockup estará disponible 48 horas en este link. Después, encuéntralo en tu cuenta").
-- UX-08: Mapa de momentos de avisos legales: zona sagrada durante diseño (sin interrupciones), avisos en entrada al portal y en transición diseño→pedido.
+- UX-08: Mapa de momentos de avisos legales (actualizado): entrada al portal sin barreras (acceso directo, sin registro); zona sagrada durante diseño (sin interrupciones); verificación de edad + ToS en transición diseño→pedido (primer momento de compromiso real); registro/login en checkout (Opción A: crear cuenta · Opción B: invitado con nombre+teléfono).
 
 ---
 
@@ -229,6 +239,10 @@ Este documento desglosa de forma completa las épicas e historias de usuario par
 | FR6 | Epic 1 | Revocación inmediata de acceso |
 | FR7 | Epic 1 | Gestión de workshop_admin por platform_admin |
 | FR8 | Epic 1 | Gestión de operarios por workshop_admin |
+| FR8b | Epic 1 | UI frontend de login/registro integrada con JWT backend |
+| FR8c | Epic 1 | Acceso anónimo: catálogo + preview de logo sin cuenta (sin IA) |
+| FR8d | Epic 1 | Auth requerida para IA, checkout o acceso a historial |
+| FR8e | Epic 1 | Verificación de email obligatoria antes de acceder a IA |
 | FR40 | Epic 1 | Gestión de compañías por platform_admin |
 | FR41 | Epic 1 | Activar/suspender compañías |
 | FR42 | Epic 1 | Restricción de capacidades por plan |
@@ -276,15 +290,15 @@ Este documento desglosa de forma completa las épicas e historias de usuario par
 | FR45b | Epic 6 | Registro estructurado de eventos facturables |
 | FR45c | Epic 6 | Exportación de datos de pedidos (CSV) |
 
-**Total: 54 FRs cubiertos en 6 épicas. Cobertura completa ✅**
+**Total: 57 FRs cubiertos en 6 épicas. Cobertura completa ✅**
 
 ---
 
 ## Epic List
 
 ### Epic 1: Identidad, Acceso y Gestión de Plataforma
-Los usuarios pueden crear cuentas, acceder a sus portales con el rol correcto, y la plataforma tiene infraestructura multi-tenant funcional desde el día 1. Un platform_admin puede gestionar talleres y planes. Un workshop_admin puede configurar su compañía e invitar operarios. Los clientes pueden registrarse públicamente.
-**FRs cubiertos:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR40, FR41, FR42, FR43, FR44
+Los visitantes pueden explorar el catálogo y ver una previsualización de su logo sobre la prenda sin crear cuenta. Las herramientas de diseño con IA requieren registro y verificación de email — el sistema envía un enlace de verificación de un solo uso (TTL 24h) al registrarse. Los usuarios registrados y verificados pueden autenticarse, mantener su sesión y recuperar acceso. Un platform_admin puede gestionar talleres y planes. Un workshop_admin puede configurar su compañía e invitar operarios. La plataforma tiene infraestructura multi-tenant funcional desde el día 1.
+**FRs cubiertos:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR8b, FR8c, FR8d, FR8e, FR40, FR41, FR42, FR43, FR44
 
 ### Epic 2: Catálogo de Prendas y Configuración del Taller
 Un cliente puede explorar las prendas disponibles del taller, ver zonas de impresión y técnicas, y seleccionar qué personalizar. Un workshop_admin puede activar/desactivar prendas, colores y técnicas según su inventario real.
@@ -495,6 +509,81 @@ para que mi empresa tenga su propia identidad y configuración operativa dentro 
 **Cuando** una futura feature intente configurar un dominio personalizado,
 **Entonces** el campo ya existe sin necesidad de una nueva migración de schema.
 
+### Story 1.7: Verificación de Email, Preview Anónimo de Logo y Guard de IA
+
+Como visitante del portal B2C,
+quiero poder ver una previsualización de mi logo sobre la prenda sin crear cuenta,
+y como usuario registrado quiero que el sistema verifique mi email antes de darme acceso a la IA,
+para que la plataforma sea segura sin crear fricción innecesaria en mi primera visita.
+
+**Acceptance Criteria:**
+
+**— Backend: Verificación de email en registro —**
+
+**Dado** que un usuario externo completa el formulario de registro (`POST /api/v1/auth/register`),
+**Cuando** el registro es procesado,
+**Entonces** el usuario se crea con `estado = PENDING_VERIFICATION` y `email_verified = false`; se genera un token de verificación de 64 caracteres (256 bits, cryptographically secure) guardado en Redis bajo `email:verify:{token}` con TTL de 24 horas; se dispara el envío del email de verificación con el enlace `/verify-email?token={token}`; el endpoint responde 201 con `{ message: "Revisa tu correo para activar tu cuenta" }` — sin emitir JWT hasta la verificación (FR8e, FR1).
+
+**Dado** que un usuario hace clic en el enlace de verificación (`GET /api/v1/auth/verify-email?token={token}`),
+**Cuando** el token existe en Redis y no ha expirado,
+**Entonces** el usuario pasa a `estado = ACTIVE`, `email_verified = true`, `email_verified_at = now()`; el token Redis es eliminado (uso único); el endpoint responde 200 con `{ message: "Email verificado. Ya puedes iniciar sesión." }` — sin emitir JWT (el usuario debe hacer login por separado) (FR8e).
+
+**Dado** que un usuario hace clic en el enlace de verificación con un token expirado o ya usado,
+**Cuando** el token no existe en Redis,
+**Entonces** el endpoint responde 400 con `{ error: "Token inválido o expirado" }` — nunca 500 ni redirección silenciosa (FR8e).
+
+**Dado** que un usuario solicita reenvío del email de verificación (`POST /api/v1/auth/resend-verification`),
+**Cuando** el request es procesado,
+**Entonces** el sistema aplica rate limiting: máximo 3 intentos por email en 15 minutos (contador en Redis `resend:limit:{email}` TTL 15min); si el límite se alcanza, responde 429; si no, invalida el token anterior y genera uno nuevo con TTL 24h, y reenvía el email (FR8e).
+
+**— Backend: Guard de IA para email_verified —**
+
+**Dado** que un usuario autenticado con `email_verified = false` llama a cualquier endpoint de generación IA,
+**Cuando** el request es procesado,
+**Entonces** el endpoint responde 403 con `{ error: "Verifica tu email para acceder a las herramientas de IA", code: "EMAIL_NOT_VERIFIED" }` — nunca 401 (el JWT es válido, pero el acceso está restringido) (FR8e, NFR-SEC-03).
+
+**Dado** que un usuario autenticado con `email_verified = true` llama a un endpoint de generación IA dentro de su cuota diaria,
+**Cuando** el request es procesado,
+**Entonces** el endpoint procede normalmente; el contador Redis `rate_limit:ai:{userId}` se incrementa atómicamente (Lua script INCR + EXPIRE en primer incremento, TTL 24h) (NFR-SEC-03).
+
+**Dado** que un usuario autenticado ha alcanzado el límite de 10 generaciones IA en las últimas 24 horas,
+**Cuando** intenta una generación adicional,
+**Entonces** el endpoint responde 429 con `{ error: "Límite diario de generaciones alcanzado", remaining: 0, resetAt: "{timestamp}" }` (NFR-SEC-03).
+
+**— Backend: Endpoint de preview anónimo —**
+
+**Dado** que un visitante sin JWT sube una imagen a `POST /api/v1/preview/logo`,
+**Cuando** el archivo es válido (PNG, JPEG o SVG, máximo 5 MB),
+**Entonces** la imagen se almacena temporalmente en storage con TTL de 2 horas (`preview/temp/{sessionId}/{filename}`), no se crea ningún registro en la tabla de usuarios ni de pedidos, y el endpoint responde 200 con `{ previewUrl: "...", expiresAt: "..." }` — sin requerir JWT (FR8c).
+
+**Dado** que el endpoint de preview recibe más de 10 solicitudes en 1 minuto desde la misma IP,
+**Cuando** se supera el límite,
+**Entonces** el endpoint responde 429 — rate limit por IP únicamente, sin fingerprinting (FR8c, NFR-SEC-03).
+
+**Dado** que el archivo subido excede 5 MB o tiene un MIME type no permitido,
+**Cuando** el request es procesado,
+**Entonces** el endpoint responde 400 con `{ error: "Archivo no válido. Formatos permitidos: PNG, JPEG, SVG. Tamaño máximo: 5 MB." }` (FR8c).
+
+**— Frontend: Zustand auth store y flujos de UI —**
+
+**Dado** que el store de Zustand inicializa el estado de autenticación,
+**Cuando** la app carga,
+**Entonces** el store de `useAuthStore` verifica la existencia de un JWT válido; si no existe, el estado es `{ user: null, accessToken: null, isAuthenticated: false, emailVerified: false }` — nunca `user.id = 'guest_123'` ni credenciales hardcodeadas en ningún entorno (FR8b).
+
+**Dado** que el store de autenticación incluye el campo `emailVerified`,
+**Cuando** el usuario inicia sesión con una cuenta no verificada,
+**Entonces** el estado del store refleja `{ isAuthenticated: true, emailVerified: false }` y el botón/ruta de acceso a IA muestra el banner "Confirma tu email para activar el diseño con IA →" con un CTA de reenvío visible (FR8e).
+
+**Dado** que un visitante anónimo hace clic en "Diseñar con IA" desde el catálogo o la pantalla de preview,
+**Cuando** el sistema detecta que no hay sesión autenticada,
+**Entonces** se muestra un panel lateral (no un redirect de página completa) con el mensaje "Un paso para diseñar con IA — Regístrate gratis" y acceso al formulario de registro/login — la selección de prenda y el preview de logo cargado se preservan visualmente durante este flujo (FR8b, FR8d).
+
+**Dado** que las pantallas de login y registro son renderizadas,
+**Cuando** el usuario navega entre ellas,
+**Entonces** son accesibles tanto como destino directo (`/login`, `/register`) como paso intermedio — el parámetro `?redirect=` preserva el destino post-autenticación; tras login exitoso con cuenta verificada, el JWT se almacena y Zustand se actualiza con `emailVerified: true` (FR8b).
+
+---
+
 ## Epic 2: Catálogo de Prendas y Configuración del Taller
 
 Un cliente puede explorar las prendas disponibles del taller, ver zonas de impresión y técnicas, y seleccionar qué personalizar. Un workshop_admin puede activar/desactivar prendas, colores y técnicas según su inventario real.
@@ -511,9 +600,9 @@ para saber qué puedo personalizar antes de comenzar a diseñar.
 **Cuando** se ejecutan los seeds SQL del catálogo,
 **Entonces** existen exactamente 10 tipos de prenda, 23 zonas de impresión normalizadas y 5 técnicas de impresión — datos migrados del prototipo con sus relaciones prenda→vista→zonas→técnicas.
 
-**Dado** que un cliente autenticado consulta el catálogo de la compañía activa (`GET /api/v1/catalog/garments`),
+**Dado** que cualquier usuario (autenticado o anónimo) consulta el catálogo de la compañía activa (`GET /api/v1/catalog/garments`),
 **Cuando** la solicitud es procesada,
-**Entonces** retorna únicamente las prendas activas para ese tenant (filtradas por `tenant_id` + `is_active = true`), con sus variantes de color disponibles.
+**Entonces** el endpoint no requiere autenticación (FR8c, FR9) y retorna únicamente las prendas activas para el tenant de la compañía activa (filtradas por `tenant_id` + `is_active = true`), con sus variantes de color disponibles. El `tenant_id` se resuelve a partir del contexto de la compañía (slug/header de tenant), no del JWT.
 
 **Dado** que un cliente consulta las zonas de impresión para una combinación prenda-vista (`GET /api/v1/catalog/garments/{garmentId}/views/{viewId}/zones`),
 **Cuando** la solicitud es procesada,

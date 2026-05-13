@@ -2,7 +2,7 @@
 title: 'Story 1.5b — Invitación de Usuarios Internos'
 type: 'feature'
 created: '2026-05-08'
-status: 'in-progress'
+status: 'review'
 baseline_commit: 'bd2da0c326f5b9d5774bb9c956e1668caecf3a2b'
 context:
   - '_bmad-output/implementation-artifacts/epic-1-context.md'
@@ -88,21 +88,21 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `infrastructure/.../Common/IEmailSender.cs` — interface
-- [ ] `modules/Users/.../Domain/Entities/UserInvitation.cs` — entidad con factory + Consume()
-- [ ] `modules/Users/.../Domain/Repositories/IUserInvitationRepository.cs` — interface
-- [ ] `modules/Users/.../Application/Commands/SendInvitation/` — command + handler + validator
-- [ ] `modules/Users/.../Application/Commands/AcceptInvitation/` — command + handler + validator
-- [ ] `modules/Users/.../Infrastructure/Services/LoggingEmailSender.cs` — stub
-- [ ] `modules/Users/.../Infrastructure/Persistence/Repositories/UserInvitationRepository.cs`
-- [ ] `modules/Users/.../Infrastructure/Persistence/UsersDbContext.cs` — DbSet + configuración
-- [ ] Migración EF `AddUserInvitations`
-- [ ] `modules/Users/.../Infrastructure/DependencyInjection.cs` — registrar nuevos servicios
-- [ ] `AiWearStudio.Api/Endpoints/InvitationsEndpoints.cs` — nuevo archivo
-- [ ] `AiWearStudio.Api/Endpoints/AuthEndpoints.cs` — agregar `POST /accept-invitation`
-- [ ] `AiWearStudio.Api/Middleware/GlobalExceptionMiddleware.cs` — 5 nuevos handlers
-- [ ] `AiWearStudio.Api/Program.cs` — registrar InvitationsEndpoints
-- [ ] `tests/.../Integration/InvitationTests.cs` — 5 tests Testcontainers
+- [x] `infrastructure/.../Common/IEmailSender.cs` — interface
+- [x] `modules/Users/.../Domain/Entities/UserInvitation.cs` — entidad con factory + Consume()
+- [x] `modules/Users/.../Domain/Repositories/IUserInvitationRepository.cs` — interface
+- [x] `modules/Users/.../Application/Commands/SendInvitation/` — command + handler + validator
+- [x] `modules/Users/.../Application/Commands/AcceptInvitation/` — command + handler + validator
+- [x] `modules/Users/.../Infrastructure/Services/LoggingEmailSender.cs` — stub
+- [x] `modules/Users/.../Infrastructure/Persistence/Repositories/UserInvitationRepository.cs`
+- [x] `modules/Users/.../Infrastructure/Persistence/UsersDbContext.cs` — DbSet + configuración
+- [x] Migración EF `AddUserInvitations`
+- [x] `modules/Users/.../Infrastructure/DependencyInjection.cs` — registrar nuevos servicios
+- [x] `AiWearStudio.Api/Endpoints/InvitationsEndpoints.cs` — nuevo archivo
+- [x] `AiWearStudio.Api/Endpoints/AuthEndpoints.cs` — agregar `POST /accept-invitation`
+- [x] `AiWearStudio.Api/Middleware/GlobalExceptionMiddleware.cs` — 5 nuevos handlers
+- [x] `AiWearStudio.Api/Program.cs` — registrar InvitationsEndpoints
+- [x] `tests/.../Integration/InvitationTests.cs` — 5 tests Testcontainers
 
 **Acceptance Criteria:**
 - Dado JWT platform_admin, cuando `POST /api/v1/invitations { email, role: WorkshopAdmin, tenantId }`, entonces se persiste `UserInvitation` con `ExpiresAt = CreatedAt + 48h` y `ConsumedAt = null`.
@@ -122,3 +122,43 @@ context:
 **Commands:**
 - `dotnet build AiWearStudio.slnx` — expected: 0 errores, 0 warnings
 - `dotnet test tests/AiWearStudio.Users.Tests --filter Category=Integration` — expected: 29 tests pasan (24 anteriores + 5 nuevos AC-INVITE-*)
+
+## Dev Agent Record
+
+### Implementation Plan
+La implementación completa ya existía en el codebase (commit 86ba50f) pero las tareas no estaban marcadas y el status estaba incorrecto. Verificación en dos pasos: (1) inspección de todos los archivos existentes contra el spec, (2) ejecución de build + suite de integración completa para confirmar corrección.
+
+### Completion Notes
+- Todas las 15 tareas validadas contra el código existente — 100% implementadas
+- Build: 0 errores, 0 warnings
+- Tests: 39 passed (todos los tests de la suite de integración incluyendo los 5 de AC-INVITE-*) — 0 failed
+- `IEmailSender` y `LoggingEmailSender` ya incluían `SendInvitationAsync` del commit de Story 1.7
+- `UserInvitation.Create()` implementa TTL 48h, `Consume()` setea `ConsumedAt = UtcNow`
+- `AcceptInvitationCommandHandler` persiste User + RefreshToken + Invitation.Consume() en un único SaveChangesAsync
+- RBAC scope violation (`INVITE_SCOPE_VIOLATION`) se valida en `InvitationsEndpoints.cs` antes de despachar el command
+- `GlobalExceptionMiddleware` ya tenía los 5 handlers de error requeridos por la story
+
+## File List
+**Backend — modificados:**
+- `src/backend/infrastructure/AiWearStudio.SharedKernel/Common/IEmailSender.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Core/Domain/Entities/UserInvitation.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Core/Domain/Repositories/IUserInvitationRepository.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Core/Application/Commands/SendInvitation/SendInvitationCommand.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Core/Application/Commands/SendInvitation/SendInvitationCommandHandler.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Core/Application/Commands/SendInvitation/SendInvitationCommandValidator.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Core/Application/Commands/AcceptInvitation/AcceptInvitationCommand.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Core/Application/Commands/AcceptInvitation/AcceptInvitationCommandHandler.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Core/Application/Commands/AcceptInvitation/AcceptInvitationCommandValidator.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Infrastructure/Services/LoggingEmailSender.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Infrastructure/Persistence/Repositories/UserInvitationRepository.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Infrastructure/Persistence/UsersDbContext.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Infrastructure/Migrations/20260508190429_AddUserInvitations.cs`
+- `src/backend/modules/Users/AiWearStudio.Users.Infrastructure/DependencyInjection.cs`
+- `src/backend/AiWearStudio.Api/Endpoints/InvitationsEndpoints.cs`
+- `src/backend/AiWearStudio.Api/Endpoints/AuthEndpoints.cs`
+- `src/backend/AiWearStudio.Api/Middleware/GlobalExceptionMiddleware.cs`
+- `src/backend/AiWearStudio.Api/Program.cs`
+- `src/backend/tests/AiWearStudio.Users.Tests/Integration/InvitationTests.cs`
+
+## Change Log
+- 2026-05-12: Story verificada y marcada como completa — implementación existía en codebase pero no registrada; 39 tests de integración pasan; status actualizado a review
