@@ -21,7 +21,7 @@ function pushHistory(state: AppState) {
 }
 
 export const useStore = create<AppState>((set) => ({
-  user: { id: 'guest_123', email: '', isGuest: true },
+  user: null,
 
   garment: INITIAL_GARMENT,
   selectedColor: INITIAL_GARMENT.availableColors[0],

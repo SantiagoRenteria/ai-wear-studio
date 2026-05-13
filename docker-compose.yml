@@ -61,6 +61,11 @@ services:
       ConnectionStrings__DesignEngine: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-aiwearstudio};Username=${POSTGRES_USER:-aiwear};Password=${POSTGRES_PASSWORD:-changeme_dev};Search Path=design_engine"
       Redis__ConnectionString: redis:6379
       Catalog__CacheTtlSeconds: 300
+      MinIO__Endpoint: minio:9000
+      MinIO__AccessKey: ${MINIO_ACCESS_KEY:-minioadmin}
+      MinIO__SecretKey: ${MINIO_SECRET_KEY:-minioadmin}
+      MinIO__UseSSL: "false"
+      MinIO__PublicBaseUrl: http://localhost:9000
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     depends_on:

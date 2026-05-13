@@ -24,6 +24,7 @@ public class JwtTokenService(IOptions<JwtSettings> jwtSettings) : IJwtTokenServi
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
             new("role", user.Role.ToString().ToLowerInvariant()),
+            new("email_verified", user.EmailVerified.ToString().ToLower()),
         };
 
         if (user.TenantId.HasValue)

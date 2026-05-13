@@ -10,4 +10,10 @@ public class LoggingEmailSender(ILogger<LoggingEmailSender> logger) : IEmailSend
         logger.LogInformation("INVITATION_EMAIL to={Email} token={Token}", toEmail, token);
         return Task.CompletedTask;
     }
+
+    public Task SendVerificationEmailAsync(string toEmail, string token, CancellationToken ct = default)
+    {
+        logger.LogInformation("VERIFICATION_EMAIL to={Email} token={Token}", toEmail, token);
+        return Task.CompletedTask;
+    }
 }

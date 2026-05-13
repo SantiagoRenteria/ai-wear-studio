@@ -5,7 +5,6 @@ using AiWearStudio.Catalog.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using StackExchange.Redis;
 
 namespace AiWearStudio.Catalog.Infrastructure;
 
@@ -13,11 +12,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddCatalogModule(this IServiceCollection services, IConfiguration config)
     {
-        var redisConn = config["Redis:ConnectionString"]
-            ?? throw new InvalidOperationException("Redis:ConnectionString not configured");
-
-        services.AddSingleton<IConnectionMultiplexer>(_ =>
-            ConnectionMultiplexer.Connect(redisConn));
+        // IConnectionMultiplexer is registered at app level in Program.cs
 
         var catalogConn = config.GetConnectionString("Catalog");
         if (string.IsNullOrWhiteSpace(catalogConn))

@@ -3,6 +3,8 @@ using AiWearStudio.Users.Core.Application.Commands.Login;
 using AiWearStudio.Users.Core.Application.Commands.Logout;
 using AiWearStudio.Users.Core.Application.Commands.RefreshToken;
 using AiWearStudio.Users.Core.Application.Commands.RegisterCustomer;
+using AiWearStudio.Users.Core.Application.Commands.ResendVerificationEmail;
+using AiWearStudio.Users.Core.Application.Commands.VerifyEmail;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -77,6 +79,32 @@ public static class AuthEndpoints
         .ProducesProblem(404)
         .ProducesProblem(409)
         .ProducesProblem(422);
+
+        group.MapGet("/verify-email", async (
+            [FromQuery] string token,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new VerifyEmailCommand(token), ct);
+            return Results.Ok(new { message = "Email verificado. Inicia sesión o refresca tu token para activar las herramientas de IA." });
+        })
+        .WithName("VerifyEmail")
+        .AllowAnonymous()
+        .Produces(200)
+        .ProducesProblem(400);
+
+        group.MapPost("/resend-verification", async (
+            [FromBody] ResendVerificationRequest request,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new ResendVerificationEmailCommand(request.Email), ct);
+            return Results.Ok(new { message = "Si el email existe en el sistema, recibirás un nuevo enlace." });
+        })
+        .WithName("ResendVerification")
+        .AllowAnonymous()
+        .Produces(200)
+        .ProducesProblem(429);
     }
 }
 
@@ -85,3 +113,4 @@ public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string Token);
 public record LogoutRequest(string Token);
 public record AcceptInvitationRequest(Guid Token, string Password);
+public record ResendVerificationRequest(string Email);

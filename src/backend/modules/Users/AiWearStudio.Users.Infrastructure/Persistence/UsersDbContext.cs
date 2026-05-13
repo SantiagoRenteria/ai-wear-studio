@@ -25,6 +25,8 @@ public class UsersDbContext(DbContextOptions<UsersDbContext> options) : DbContex
             entity.Property(u => u.IsActive).HasColumnName("is_active");
             entity.Property(u => u.DeletedAt).HasColumnName("deleted_at");
             entity.Property(u => u.CreatedAt).HasColumnName("created_at");
+            entity.Property(u => u.EmailVerified).HasColumnName("email_verified").HasDefaultValue(false);
+            entity.Property(u => u.EmailVerifiedAt).HasColumnName("email_verified_at");
 
             entity.HasQueryFilter(u => u.DeletedAt == null);
 
